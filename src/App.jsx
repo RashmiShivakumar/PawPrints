@@ -1004,6 +1004,30 @@ function PawPrintsInner() {
     persist({ dogs: next, activeId: withId.name });
   };
 
+  const markInMemory = (name) => {
+    const target = dogs.find((d) => d.name === name);
+    if (!target) return;
+    const makeMemorial = !target.memorial;
+    const next = dogs.map((d) =>
+      d.name === name
+        ? { ...d, memorial: makeMemorial, memorialAt: makeMemorial ? new Date().toISOString() : undefined }
+        : d
+    );
+    setDogs(next);
+    persist({ dogs: next });
+    setComposing(null);
+  };
+
+  const removeDog = (name) => {
+    if (!window.confirm(`Delete ${name}'s profile from this device? Use In Memory instead if you want to keep the profile as a memorial.`)) return;
+    const next = dogs.filter((d) => d.name !== name);
+    const nextActive = activeId === name ? (next[0]?.name || null) : activeId;
+    setDogs(next);
+    setActiveId(nextActive);
+    setComposing(next.length ? null : { mode: "account" });
+    persist({ dogs: next, activeId: nextActive });
+  };
+
   /* ---- claude: match trails to this dog ---- */
   const runMatch = async () => {
     setMatching(true);
@@ -1371,6 +1395,9 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
         ) : (
           <Setup
             sibling={step === "new" && dogs.length > 0}
+            editing={step === "replace"}
+            initialDog={composing?.mode === "replace" ? dogs.find((x) => x.name === composing.name) : null}
+            initialAvatar={composing?.mode === "replace" ? avatarMap[composing.name] : null}
             onPick={(d, avatarUrl) => {
               if (avatarUrl) setAvatar(d.name, avatarUrl);
               addDog(
@@ -1379,9 +1406,11 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
                 composing?.mode !== "replace"
               );
             }}
+            onDelete={composing?.mode === "replace" ? () => removeDog(composing.name) : null}
+            onMemorial={composing?.mode === "replace" ? () => markInMemory(composing.name) : null}
             onBackToGate={
               dogs.length
-                ? () => setComposing(composing?.first ? null : { mode: "choose" })
+                ? () => setComposing(composing?.mode === "replace" ? null : (composing?.first ? null : { mode: "choose" }))
                 : () => setComposing({ mode: "account" })
             }
           />
@@ -1667,6 +1696,7 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
         </div>
         <h2>{subject.name}</h2>
         <p className="pp-dp-meta">{subject.breed} · {subject.age}</p>
+        {subject.memorial && <div className="pp-memorial-note">In Memory 🌈 · keeping {subject.name}'s adventures and memories close.</div>}
         {readOnly && mutuals?.length > 0 && <p className="pp-mutual">Paw friends with {mutuals.join(" & ")}</p>}
         {readOnly && (
           <button className={connected ? "pp-ghost pp-connected" : "pp-purple pp-connect"} onClick={() => onToggleFriend(subject.name)}>
@@ -2094,17 +2124,17 @@ function AccountMenu({ dogs, owner, avatars, activeId, isGuest, onSwitch, onHous
 /* Landing animation: a flat, chunky puppy ambles after a butterfly, leaving
    prints behind. Deliberately slow — an amble, not a run. */
 function WalkingDog() {
-  const prints = [14, 52, 90, 128, 166, 204, 242, 280];
+  const prints = [26, 64, 102, 140, 178, 216, 254, 292];
   return (
-    <svg className="pp-walk" viewBox="0 0 320 96" role="img" aria-label="A puppy following a butterfly, leaving paw prints">
-      <line className="pp-walk-ground" x1="0" y1="86" x2="320" y2="86" />
+    <svg className="pp-walk" viewBox="0 0 320 104" role="img" aria-label="A playful puppy bouncing under a butterfly and leaving paw prints">
+      <line className="pp-walk-ground" x1="0" y1="92" x2="320" y2="92" />
 
       {prints.map((x, i) => (
         <g
           key={x}
           className="pp-walk-print"
-          style={{ animationDelay: `${1.76 + i * 0.8}s` }}
-          transform={`translate(${x} ${i % 2 ? 78 : 71}) scale(0.34)`}
+          style={{ animationDelay: `${1.45 + i * 0.82}s` }}
+          transform={`translate(${x} ${i % 2 ? 84 : 77}) scale(0.34)`}
         >
           <ellipse cx="16" cy="21" rx="7.5" ry="6.5" />
           <circle cx="7.5" cy="12.5" r="3.4" />
@@ -2114,7 +2144,6 @@ function WalkingDog() {
         </g>
       ))}
 
-      {/* the butterfly, always a little out of reach */}
       <g className="pp-fly">
         <g className="pp-flutter">
           <g className="pp-wing left">
@@ -2130,30 +2159,30 @@ function WalkingDog() {
       </g>
 
       <g className="pp-walk-dog">
-        <g className="pp-amble">
-          {/* far legs */}
-          <g className="pp-leg-g alt"><rect className="pp-leg-far" x="20" y="58" width="9" height="22" rx="4.5" /></g>
-          <g className="pp-leg-g"><rect className="pp-leg-far" x="50" y="58" width="9" height="22" rx="4.5" /></g>
+        <ellipse className="pp-shadow" cx="52" cy="90" rx="31" ry="5.5" />
+        <g className="pp-pup-bounce">
+          <g className="pp-pup-body">
+            <g className="pp-tail-g"><path className="pp-tail-shape" d="M22 56 Q9 48 14 34" /></g>
 
-          {/* tail, up and gently wagging */}
-          <g className="pp-tail-g"><path className="pp-tail-shape" d="M18 46 Q6 40 10 26" /></g>
+            <g className="pp-leg-g pp-back-leg"><rect className="pp-leg-far" x="29" y="62" width="9" height="21" rx="4.5" /></g>
+            <g className="pp-leg-g alt pp-back-leg"><rect className="pp-leg-far" x="59" y="62" width="9" height="21" rx="4.5" /></g>
 
-          {/* chunky body */}
-          <rect className="pp-fill" x="16" y="38" width="52" height="26" rx="13" />
+            <ellipse className="pp-fill" cx="52" cy="56" rx="33" ry="18" />
+            <ellipse className="pp-belly" cx="50" cy="61" rx="17" ry="10" />
 
-          {/* near legs */}
-          <g className="pp-leg-g"><rect className="pp-fill" x="28" y="58" width="10" height="23" rx="5" /></g>
-          <g className="pp-leg-g alt"><rect className="pp-fill" x="56" y="58" width="10" height="23" rx="5" /></g>
+            <g className="pp-leg-g pp-front-leg"><rect className="pp-fill" x="39" y="62" width="10" height="22" rx="5" /></g>
+            <g className="pp-front-pawlift"><rect className="pp-fill" x="69" y="54" width="10" height="20" rx="5" /></g>
 
-          {/* head, lifted toward the butterfly */}
-          <g className="pp-head">
-            <rect className="pp-fill" x="56" y="24" width="16" height="22" rx="8" />
-            <circle className="pp-fill" cx="72" cy="28" r="15" />
-            <ellipse className="pp-fill" cx="86" cy="32" rx="8" ry="6.5" />
-            <circle className="pp-nose-dot" cx="92" cy="29" r="2.4" />
-            <circle className="pp-nose-dot" cx="77" cy="24" r="2.2" />
-            <path className="pp-mouth" d="M84 36 Q88 39 91 36" />
-            <path className="pp-ear-shape" d="M66 18 Q56 20 55 34 Q55 44 67 37 Z" />
+            <g className="pp-head">
+              <rect className="pp-fill" x="60" y="32" width="16" height="20" rx="8" />
+              <circle className="pp-fill" cx="78" cy="36" r="16" />
+              <ellipse className="pp-fill" cx="92" cy="40" rx="8.5" ry="6.8" />
+              <circle className="pp-nose-dot" cx="97" cy="37.5" r="2.4" />
+              <circle className="pp-nose-dot" cx="81" cy="33" r="2.2" />
+              <path className="pp-mouth" d="M88 45 Q92 48 95 45" />
+              <path className="pp-ear-shape" d="M67 25 Q57 27 58 40 Q60 50 71 44 Z" />
+              <circle className="pp-cheek" cx="86" cy="43" r="2.4" />
+            </g>
           </g>
         </g>
       </g>
@@ -2236,14 +2265,107 @@ function UpgradeModal({ trail, onJoin, onClose }) {
   );
 }
 
-function Setup({ onPick, onBackToGate, sibling }) {
+function Setup({ onPick, onBackToGate, sibling, editing = false, initialDog = null, initialAvatar = null, onDelete = null, onMemorial = null }) {
   const [step, setStep] = useState(0);
   const [samples, setSamples] = useState(false);
-  const [d, setD] = useState({
-    name: "", breed: "", age: "", size: "", coat: "", heat: "",
-    energy: "", water: "", joints: "", social: "",
-  });
-  const [avatar, setAvatar] = useState(null);
+  const [d, setD] = useState(
+    initialDog || {
+      name: "", breed: "", age: "", size: "", coat: "", heat: "",
+      energy: "", water: "", joints: "", social: "",
+    }
+  );
+  const [avatar, setAvatar] = useState(initialAvatar || null);
+
+  useEffect(() => {
+    if (initialDog) setD(initialDog);
+    if (typeof initialAvatar !== "undefined") setAvatar(initialAvatar || null);
+  }, [initialDog, initialAvatar]);
+
+  const set = (k, v) => setD((p) => ({ ...p, [k]: v }));
+
+  const finish = () =>
+    onPick(
+      { ...d, name: d.name.trim(), breed: d.breed.trim(), quirk: d.quirk || (editing ? "Updated profile" : "Freshly registered") },
+      avatar
+    );
+
+  if (editing) {
+    const detailGroups = STEPS.filter((x) => x.groups).flatMap((x) => x.groups);
+    const ready = d.name.trim() && d.breed.trim() && detailGroups.every((g) => d[g.name]);
+
+    return (
+      <div className="pp-setup pp-edit-profile">
+        <button className="pp-back" onClick={onBackToGate}>‹ Back to profiles</button>
+        <h1 className="pp-setup-title">Edit {initialDog?.name || "profile"}</h1>
+        <p className="pp-setup-sub">
+          Change the details below and save once. PawPrints memories and PawPassport history stay linked.
+        </p>
+
+        <div className="pp-form">
+          <div className="pp-setupav">
+            <AvatarPicker
+              name={d.name || "?"}
+              src={avatar}
+              size={78}
+              onPick={setAvatar}
+              label="Add a photo (optional)"
+            />
+          </div>
+
+          <label>
+            Name
+            <input value={d.name} disabled />
+            <small className="pp-fieldnote">Name is kept stable in this prototype so existing memories stay linked.</small>
+          </label>
+
+          <label>
+            Breed or mix
+            <input
+              value={d.breed}
+              onChange={(e) => set("breed", e.target.value)}
+              placeholder="Golden Retriever, or Shepherd mix"
+            />
+          </label>
+        </div>
+
+        {detailGroups.map((g) => (
+          <div key={g.name} className="pp-group">
+            <p className="pp-grouplabel">{g.label}</p>
+            <div className="pp-chips">
+              {g.options.map((o) => (
+                <button
+                  type="button"
+                  key={o}
+                  className={d[g.name] === o ? "pp-chip on" : "pp-chip"}
+                  onClick={() => set(g.name, o)}
+                  aria-pressed={d[g.name] === o}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <button className="pp-primary pp-next" disabled={!ready} onClick={finish}>
+          Save changes
+        </button>
+
+        <div className="pp-edit-actions">
+          <button type="button" className="pp-softbtn" onClick={onMemorial}>
+            {d.memorial ? "Remove In Memory status" : "Mark In Memory 🌈"}
+          </button>
+          <button type="button" className="pp-dangerlink" onClick={onDelete}>
+            Delete profile
+          </button>
+        </div>
+
+        <p className="pp-memorial-help">
+          In Memory keeps the profile, photos, posts and PawPassport as a remembrance. Delete is for accidental or duplicate profiles.
+        </p>
+      </div>
+    );
+  }
 
   if (samples) {
     return (
@@ -2252,13 +2374,13 @@ function Setup({ onPick, onBackToGate, sibling }) {
         <h1 className="pp-setup-title">Borrow a dog</h1>
         <p className="pp-setup-sub">Four profiles that pull the matching in different directions.</p>
         <div className="pp-dogs">
-          {DEMO_DOGS.map((s) => (
-            <button key={s.name} className="pp-dogcard" onClick={() => onPick(s)}>
-              <Avatar name={s.name} size={52} />
+          {DEMO_DOGS.map((sample) => (
+            <button key={sample.name} className="pp-dogcard" onClick={() => onPick(sample)}>
+              <Avatar name={sample.name} size={52} />
               <div>
-                <strong>{s.name}</strong>
-                <span>{s.breed} · {s.age} · {s.energy}</span>
-                <em>{s.quirk}</em>
+                <strong>{sample.name}</strong>
+                <span>{sample.breed} · {sample.age} · {sample.energy}</span>
+                <em>{sample.quirk}</em>
               </div>
             </button>
           ))}
@@ -2274,16 +2396,11 @@ function Setup({ onPick, onBackToGate, sibling }) {
       ? d.name.trim() && d.breed.trim()
       : cur.groups.every((g) => d[g.name]);
 
-  const set = (k, v) => setD((p) => ({ ...p, [k]: v }));
-
-  const finish = () =>
-    onPick({ ...d, name: d.name.trim(), breed: d.breed.trim(), quirk: "Freshly registered" }, avatar);
-
   return (
     <div className="pp-setup">
       <div className="pp-progress" role="progressbar" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS.length}>
-        {STEPS.map((s, i) => (
-          <span key={s.key} className={i <= step ? "on" : ""} />
+        {STEPS.map((st, i) => (
+          <span key={st.key} className={i <= step ? "on" : ""} />
         ))}
       </div>
 
@@ -2375,17 +2492,43 @@ function Setup({ onPick, onBackToGate, sibling }) {
 /* -------------------------------- trail list ------------------------------- */
 
 function TrailList({ dog, dogs, activeId, onSwitch, days, plan, onPlan, weather, weatherFailed, matches, matching, error, stamps, onMatch, onOpen }) {
+  const adventureDogs = (dogs || []).filter((d) => !d.memorial);
+
+  if (dog?.memorial) {
+    return (
+      <div className="pp-memorial-panel">
+        <div className="pp-memorial-rainbow">🌈</div>
+        <h2>{dog.name} is In Memory</h2>
+        <p>
+          {dog.name}'s PawPassport and past adventures stay with you. New trail planning is paused for this profile.
+        </p>
+        {adventureDogs.length > 0 && (
+          <>
+            <p className="pp-grouplabel">Plan for another dog</p>
+            <div className="pp-chips">
+              {adventureDogs.map((d) => (
+                <button key={d.name} className="pp-chip" onClick={() => onSwitch(d.name)}>
+                  {d.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   const list = matches
     ? [...TRAILS].sort((a, b) => (matches[b.id]?.score || 0) - (matches[a.id]?.score || 0))
     : TRAILS;
 
   return (
     <>
-      {dogs?.length > 1 && (
+      {adventureDogs.length > 1 && (
         <section className="pp-who">
           <p className="pp-grouplabel">Who's coming?</p>
           <div className="pp-chips">
-            {dogs.map((d) => (
+            {adventureDogs.map((d) => (
               <button
                 key={d.name}
                 className={activeId === d.name ? "pp-chip on" : "pp-chip"}
@@ -2552,7 +2695,7 @@ function ProfileScreen({ dogs, owner, avatars, onSetAvatar, stamps, onEdit, onAd
               onPick={(url) => onSetAvatar(d.name, url)}
             />
             <div>
-              <strong>{d.name}</strong>
+              <strong>{d.name} {d.memorial && <span className="pp-memorial-badge">In Memory 🌈</span>}</strong>
               <em className="pp-idinline">{d.id}</em>
             </div>
             <button className="pp-editlink" onClick={() => onEdit(d.name)}>Edit</button>
@@ -2813,6 +2956,15 @@ function InvitationComposer({ dog, initialType, onCreate, onClose }) {
 function PawTogether({ dog, invitations, avatars, onSniff, onCreate, onRespond, onJoin }) {
   const [tab, setTab] = useState("community");
   if (dog.guest) return <GuestPanel kind="profile" onJoin={onJoin}/>;
+  if (dog.memorial) {
+    return (
+      <div className="pp-memorial-panel">
+        <div className="pp-memorial-rainbow">🌈</div>
+        <h2>{dog.name} is In Memory</h2>
+        <p>Past friendships and memories remain part of PawPrints. New play, adventure, sleepover and hosting invitations are paused for this profile.</p>
+      </div>
+    );
+  }
   const community = invitations.filter((i)=>!i.mine);
   const mine = invitations.filter((i)=>i.mine);
   const cards = tab === "mine" ? mine : community;
@@ -3011,73 +3163,102 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-gate-mark{flex:none;width:44px;height:44px;display:grid;place-items:center;background:#fff;border-radius:13px}
 .pp-gate-mark.ghost{opacity:.4}
 /* landing walk animation */
-.pp-walk{width:100%;height:96px;display:block;margin:6px 0 18px;overflow:visible}
+.pp-walk{width:100%;height:104px;display:block;margin:8px 0 18px;overflow:visible}
 .pp-walk-ground{stroke:#E4DBF6;stroke-width:2;stroke-dasharray:3 7;stroke-linecap:round}
-.pp-walk-print{fill:#6D3DD1;opacity:0;animation:printfade 8.8s linear infinite backwards}
-@keyframes printfade{0%{opacity:0;transform:scale(.88)}4%{opacity:.56;transform:scale(1)}76%{opacity:.28}100%{opacity:0;transform:scale(.96)}}
-/* flat, solid shapes — no outlines */
+.pp-walk-print{fill:#6D3DD1;opacity:0;animation:printfade 8.4s linear infinite backwards}
+@keyframes printfade{0%{opacity:0}4%{opacity:.55}72%{opacity:.28}100%{opacity:0}}
+/* playful puppy landing art */
 .pp-fill{fill:#7C4DDB}
 .pp-leg-far{fill:#5B34A8}
 .pp-ear-shape{fill:#5B34A8}
 .pp-tail-shape{fill:none;stroke:#7C4DDB;stroke-width:8;stroke-linecap:round}
 .pp-nose-dot{fill:#2B2140}
-.pp-mouth{fill:none;stroke:#2B2140;stroke-width:1.8;stroke-linecap:round;opacity:.7}
+.pp-mouth{fill:none;stroke:#2B2140;stroke-width:1.8;stroke-linecap:round;opacity:.72}
 .pp-wing-shape{fill:#F49CB6}
 .pp-fly-body{fill:#5B34A8}
+.pp-shadow{fill:#E8DCF9}
+.pp-belly{fill:#9C78EA;opacity:.95}
+.pp-cheek{fill:#F7B2C8;opacity:.85}
 
-/* softer, friendlier motion */
-.pp-walk-dog{animation:amblecross 8.8s cubic-bezier(.42,0,.22,1) infinite}
-.pp-amble{transform-box:fill-box;transform-origin:50% 70%;animation:dogbob 1s ease-in-out infinite}
-.pp-leg-g{transform-box:fill-box;transform-origin:50% 4%;animation:legswing 1s cubic-bezier(.45,.05,.55,.95) infinite}
-.pp-leg-g.alt{animation-delay:-.5s}
-.pp-head{transform-box:fill-box;transform-origin:15% 85%;animation:headbop 2.7s ease-in-out infinite}
-.pp-tail-g{transform-box:fill-box;transform-origin:100% 100%;animation:tailhappy .42s ease-in-out infinite}
-.pp-fly{animation:flycross 8.8s linear infinite}
-.pp-flutter{animation:bobfly 1.35s ease-in-out infinite}
+.pp-walk-dog{animation:puppycross 8.4s linear infinite}
+.pp-pup-bounce{transform-box:fill-box;transform-origin:50% 80%;animation:puppybounce .95s ease-in-out infinite}
+.pp-pup-body{transform-box:fill-box;transform-origin:50% 60%;animation:puppyrock .95s ease-in-out infinite}
+.pp-leg-g{transform-box:fill-box;transform-origin:50% 5%;animation:legswing .95s ease-in-out infinite}
+.pp-leg-g.alt{animation-delay:-.48s}
+.pp-front-pawlift{transform-box:fill-box;transform-origin:45% 10%;animation:pawlift .95s ease-in-out infinite}
+.pp-head{transform-box:fill-box;transform-origin:20% 85%;animation:headcurious 2.2s ease-in-out infinite}
+.pp-tail-g{transform-box:fill-box;transform-origin:100% 100%;animation:tailhappy .34s ease-in-out infinite}
+.pp-fly{animation:flycross 8.4s linear infinite}
+.pp-flutter{animation:bobfly 1.25s ease-in-out infinite}
 .pp-wing{transform-box:fill-box;transform-origin:100% 50%;animation:flap .18s ease-in-out infinite alternate}
 .pp-wing.right{transform-origin:0% 50%;animation-name:flapr}
 
-@keyframes amblecross{
-  0%{transform:translateX(-100px)}
-  100%{transform:translateX(330px)}
+@keyframes puppycross{
+  0%{transform:translateX(-102px)}
+  100%{transform:translateX(332px)}
 }
-@keyframes flycross{
-  0%{transform:translate(17px,22px)}
-  16%{transform:translate(78px,16px)}
-  34%{transform:translate(148px,25px)}
-  54%{transform:translate(225px,12px)}
-  76%{transform:translate(310px,18px)}
-  100%{transform:translate(447px,22px)}
+@keyframes puppybounce{
+  0%,100%{transform:translateY(0)}
+  20%{transform:translateY(-3px)}
+  45%{transform:translateY(-9px)}
+  68%{transform:translateY(-2px)}
 }
-@keyframes bobfly{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes flap{from{transform:rotate(8deg) scaleX(1)}to{transform:rotate(-4deg) scaleX(.42)}}
-@keyframes flapr{from{transform:rotate(-8deg) scaleX(1)}to{transform:rotate(4deg) scaleX(.42)}}
-@keyframes dogbob{
-  0%,100%{transform:translateY(0) rotate(0deg)}
-  25%{transform:translateY(-1.2px) rotate(-.6deg)}
-  50%{transform:translateY(-2.8px) rotate(0deg)}
-  75%{transform:translateY(-1.2px) rotate(.6deg)}
+@keyframes puppyrock{
+  0%,100%{transform:rotate(0deg)}
+  25%{transform:rotate(-1.2deg)}
+  50%{transform:rotate(.8deg)}
+  75%{transform:rotate(-.8deg)}
 }
 @keyframes legswing{
-  0%{transform:rotate(-16deg) translateY(0)}
-  50%{transform:rotate(15deg) translateY(.6px)}
-  100%{transform:rotate(-16deg) translateY(0)}
+  0%{transform:rotate(-14deg) translateY(0)}
+  50%{transform:rotate(13deg) translateY(.8px)}
+  100%{transform:rotate(-14deg) translateY(0)}
 }
-@keyframes headbop{
+@keyframes pawlift{
+  0%,100%{transform:rotate(10deg) translate(0,0)}
+  50%{transform:rotate(-22deg) translate(-2px,-7px)}
+}
+@keyframes headcurious{
   0%,100%{transform:translateY(0) rotate(0deg)}
-  18%{transform:translateY(-1.2px) rotate(-5deg)}
-  36%{transform:translateY(-.2px) rotate(-2deg)}
-  58%{transform:translateY(.4px) rotate(1.2deg)}
-  74%{transform:translateY(-.8px) rotate(-2.8deg)}
+  20%{transform:translateY(-1px) rotate(-4deg)}
+  40%{transform:translateY(-.5px) rotate(-7deg)}
+  58%{transform:translateY(.3px) rotate(1deg)}
+  76%{transform:translateY(-1px) rotate(-3deg)}
 }
 @keyframes tailhappy{
-  0%{transform:rotate(-16deg)}
-  25%{transform:rotate(4deg)}
-  50%{transform:rotate(18deg)}
-  75%{transform:rotate(7deg)}
+  0%{transform:rotate(-18deg)}
+  25%{transform:rotate(6deg)}
+  50%{transform:rotate(22deg)}
+  75%{transform:rotate(8deg)}
   100%{transform:rotate(-12deg)}
 }
+@keyframes flycross{
+  0%{transform:translate(20px,25px)}
+  14%{transform:translate(74px,17px)}
+  30%{transform:translate(132px,26px)}
+  50%{transform:translate(202px,14px)}
+  72%{transform:translate(276px,20px)}
+  100%{transform:translate(392px,24px)}
+}
+@keyframes bobfly{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes flap{from{transform:rotate(8deg) scaleX(1)}to{transform:rotate(-4deg) scaleX(.42)}}
+@keyframes flapr{from{transform:rotate(-8deg) scaleX(1)}to{transform:rotate(4deg) scaleX(.42)}}
 
+/* profile edit utilities */
+.pp-memorial-badge{display:inline-flex;align-items:center;gap:4px;margin-left:8px;background:#F3ECFF;color:var(--violet);border:1px solid #D8C8F6;border-radius:999px;padding:2px 7px;font-size:10.5px;font-weight:800;vertical-align:middle}
+.pp-memorial-note{margin-top:8px;background:#FBF7FF;color:#6B4CB2;border:1px solid #E3D7F5;border-radius:12px;padding:8px 10px;font-size:11.5px;font-weight:700}
+.pp-edit-actions{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+.pp-softbtn{flex:1;border:1px solid #D4C5F2;background:#fff;color:var(--violet);border-radius:12px;padding:11px 12px;font:700 13px 'Nunito';cursor:pointer}
+.pp-dangerlink{border:0;background:none;color:#8A4A4A;font:800 12.5px 'Nunito';cursor:pointer;text-decoration:underline}
+
+
+.pp-fieldnote{display:block;margin-top:5px;color:var(--dim);font-size:11px;line-height:1.35}
+.pp-edit-profile .pp-group{margin-top:18px}
+.pp-memorial-help{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:12px;text-align:left}
+.pp-memorial-panel{text-align:center;background:#FBF8FF;border:1px solid #E1D5F6;border-radius:20px;padding:28px 20px;margin:12px 0}
+.pp-memorial-panel h2{font-size:22px;color:var(--violet);margin:6px 0 8px}
+.pp-memorial-panel p{font-size:13.5px;color:var(--dim);line-height:1.5;max-width:38ch;margin:0 auto 16px}
+.pp-memorial-rainbow{font-size:34px}
 @media (prefers-reduced-motion:reduce){.pp-walk-print{opacity:.4}.pp-walk-dog{transform:translateX(110px)}.pp-fly{transform:translate(232px,20px)}}
 .pp-crash{max-width:420px;margin:60px auto;padding:26px;text-align:center;font-family:'Nunito',system-ui,sans-serif}
 .pp-crash h2{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;margin-bottom:10px}
