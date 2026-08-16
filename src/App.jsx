@@ -861,14 +861,22 @@ function Spinner({ label }) {
 
 /* ---------------------------------- app ----------------------------------- */
 
-export default function PawBookApp() {
+export default function PawPrintsApp() {
+  return (
+    <AppErrorBoundary>
+      <PawPrintsInner />
+    </AppErrorBoundary>
+  );
+}
+
+function PawPrintsInner() {
   const [mode, setMode] = useState(null); // null | "guest" | "member"
   const [dogs, setDogs] = useState([]);
   const [owner, setOwner] = useState(null); // { email }
   const [activeId, setActiveId] = useState(null); // dog name, or "__pack__"
   const [composing, setComposing] = useState(null); // null | {mode:"new"|"replace", name?}
-  const [view, setView] = useState("pawbook");
-  const [pawbookTab, setPawbookTab] = useState("feed");
+  const [view, setView] = useState("pawprints");
+  const [pawprintsTab, setPawprintsTab] = useState("feed");
   const [openTrail, setOpenTrail] = useState(null);
   const [stamps, setStamps] = useState([]);
   const [pledged, setPledged] = useState(false);
@@ -1387,7 +1395,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
   const trail = openTrail ? TRAILS.find((t) => t.id === openTrail) : null;
 
   const inPawPark = !!trail || view === "trails" || view === "passport";
-  const worldClass = inPawPark ? "pawpark-world" : "pawbook-world";
+  const worldClass = inPawPark ? "pawpark-world" : "pawprints-world";
 
   return (
     <Shell>
@@ -1466,8 +1474,8 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
               onRespond={respondToInterest}
               onJoin={() => { setMode("member"); setDogs([]); setActiveId(null); setComposing({ mode: "account" }); }}
             />
-          ) : view === "pawbook" ? (
-            <PawBook
+          ) : view === "pawprints" ? (
+            <PawPrints
               dog={dog}
               houseDogs={realDogs}
               onSwitchDog={(id) => {
@@ -1497,8 +1505,8 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
               onReact={react}
               comments={comments}
               onOpenBarks={setBarkPost}
-              tab={pawbookTab}
-              onTab={setPawbookTab}
+              tab={pawprintsTab}
+              onTab={setPawprintsTab}
               onJoin={() => { setMode("member"); setDogs([]); setActiveId(null); setComposing({ mode: "account" }); }}
             />
           ) : view === "profile" ? (
@@ -1532,7 +1540,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
 
         {!trail && (
           <nav className="pp-tabs pp-main-tabs">
-            <button className={view === "pawbook" && pawbookTab === "feed" ? "on" : ""} onClick={() => { setView("pawbook"); setPawbookTab("feed"); }}>
+            <button className={view === "pawprints" && pawprintsTab === "feed" ? "on" : ""} onClick={() => { setView("pawprints"); setPawprintsTab("feed"); }}>
               <span>🐾</span>PawFeed
             </button>
             <button className={view === "together" ? "on" : ""} onClick={() => setView("together")}>
@@ -1544,7 +1552,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
             <button className={inPawPark ? "on" : ""} onClick={() => setView("trails")}>
               <span>🌲</span>PawPark
             </button>
-            <button className={view === "pawbook" && pawbookTab === "profile" ? "on" : ""} onClick={() => { setView("pawbook"); setPawbookTab("profile"); }}>
+            <button className={view === "pawprints" && pawprintsTab === "profile" ? "on" : ""} onClick={() => { setView("pawprints"); setPawprintsTab("profile"); }}>
               <span>🐕</span>Profile
             </button>
           </nav>
@@ -1575,7 +1583,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
       {composer && (
           <Composer
             dog={dog}
-            onPost={(caption, media, visibility) => { publishPost(null, caption, media, visibility); setComposer(null); setView("pawbook"); setPawbookTab("feed"); }}
+            onPost={(caption, media, visibility) => { publishPost(null, caption, media, visibility); setComposer(null); setView("pawprints"); setPawprintsTab("feed"); }}
             onClose={() => setComposer(null)}
           />
         )}
@@ -1752,7 +1760,7 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
   );
 }
 
-function PawBook({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling, posts, photos, friends, avatars, onSetAvatar, onToggleFriend, onCompose, stamps, pledged, bios, bioLoading, onWriteBio, onSaveBio, pawPrefs, onTogglePref, reactions, onReact, comments, onOpenBarks, tab, onTab, onJoin }) {
+function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling, posts, photos, friends, avatars, onSetAvatar, onToggleFriend, onCompose, stamps, pledged, bios, bioLoading, onWriteBio, onSaveBio, pawPrefs, onTogglePref, reactions, onReact, comments, onOpenBarks, tab, onTab, onJoin }) {
   const household = dog.pack ? dog.members.map((m) => m.name) : [dog.name];
   const others = DEMO_DOGS.filter((d) => !household.includes(d.name));
   const members = (houseDogs && houseDogs.length ? houseDogs : (dog.pack ? dog.members : [dog]));
@@ -1783,7 +1791,7 @@ function PawBook({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling, p
     const b = DEMO_DOGS.find((d) => d.name === viewing);
     const mutuals = (BUDDY_DATA[viewing]?.friends || []).filter((f) => friends.includes(f));
     return (
-      <div className="pp-book">
+      <div className="pp-prints">
         <button className="pp-back" onClick={() => setViewing(null)}>‹ Paw Friends</button>
         <DogProfile subject={{ ...b, id: REGISTRY[Object.keys(REGISTRY).find((k) => REGISTRY[k].name === viewing)]?.id }} avatarSrc={avatarFor(viewing)} avatarBreed={b?.breed} stamps={buddyStamps(viewing)} posts={buddyGridPosts(viewing)} photos={allPhotos} pledged={BUDDY_DATA[viewing]?.pledged} bio={BUDDY_DATA[viewing]?.bio} prefs={SEEDED_PREFS[viewing]} readOnly connected={friends.includes(viewing)} onToggleFriend={onToggleFriend} mutuals={mutuals} />
       </div>
@@ -1791,8 +1799,8 @@ function PawBook({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling, p
   }
 
   return (
-    <div className="pp-book">
-      <div className="pp-book-head"><h2>PawPrints</h2><p>Your dog's world. Your trusted community. 💜</p></div>
+    <div className="pp-prints">
+      <div className="pp-prints-head"><h2>PawPrints</h2><p>Your dog's world. Your trusted community. 💜</p></div>
       <div className="pp-seg">
         <button className={tab === "feed" ? "on" : ""} onClick={() => onTab("feed")}>PawFeed</button>
         <button className={tab === "friends" ? "on" : ""} onClick={() => onTab("friends")}>Paw Friends {friends.length > 0 && <em className="pp-segcount">{friends.length}</em>}</button>
@@ -1928,23 +1936,6 @@ function SiblingChoice({ onExisting, onNew, onBack }) {
           <span>They already have a Paw ID — a partner, a co-owner, or a rescue registered them. Link it to your account.</span>
         </div>
       </button>
-
-      {savedDogs?.length > 0 && (
-        <button className="pp-gatecard resume" onClick={onResume}>
-          <div className="pp-stack">
-            {savedDogs.slice(0, 3).map((d) => (
-              <Avatar key={d.name} name={d.name} size={40} src={savedAvatars?.[d.name]} />
-            ))}
-          </div>
-          <div>
-            <strong>Welcome back</strong>
-            <span>
-              Continue as {savedDogs.map((d) => d.name).join(" & ")}
-              {savedOwner?.email ? ` · ${savedOwner.email}` : ""}
-            </span>
-          </div>
-        </button>
-      )}
 
       <button className="pp-gatecard primary" onClick={onNew}>
         <div className="pp-gate-mark"><PawMark /></div>
@@ -2100,12 +2091,100 @@ function AccountMenu({ dogs, owner, avatars, activeId, isGuest, onSwitch, onHous
   );
 }
 
+/* Landing animation: a flat, chunky puppy ambles after a butterfly, leaving
+   prints behind. Deliberately slow — an amble, not a run. */
+function WalkingDog() {
+  const prints = [14, 52, 90, 128, 166, 204, 242, 280];
+  return (
+    <svg className="pp-walk" viewBox="0 0 320 96" role="img" aria-label="A puppy following a butterfly, leaving paw prints">
+      <line className="pp-walk-ground" x1="0" y1="86" x2="320" y2="86" />
+
+      {prints.map((x, i) => (
+        <g
+          key={x}
+          className="pp-walk-print"
+          style={{ animationDelay: `${1.76 + i * 0.8}s` }}
+          transform={`translate(${x} ${i % 2 ? 78 : 71}) scale(0.34)`}
+        >
+          <ellipse cx="16" cy="21" rx="7.5" ry="6.5" />
+          <circle cx="7.5" cy="12.5" r="3.4" />
+          <circle cx="13" cy="8" r="3.4" />
+          <circle cx="19" cy="8" r="3.4" />
+          <circle cx="24.5" cy="12.5" r="3.4" />
+        </g>
+      ))}
+
+      {/* the butterfly, always a little out of reach */}
+      <g className="pp-fly">
+        <g className="pp-flutter">
+          <g className="pp-wing left">
+            <ellipse className="pp-wing-shape" cx="-4" cy="-3" rx="5" ry="6.5" />
+            <ellipse className="pp-wing-shape" cx="-3.5" cy="3" rx="4" ry="4.5" />
+          </g>
+          <g className="pp-wing right">
+            <ellipse className="pp-wing-shape" cx="4" cy="-3" rx="5" ry="6.5" />
+            <ellipse className="pp-wing-shape" cx="3.5" cy="3" rx="4" ry="4.5" />
+          </g>
+          <ellipse className="pp-fly-body" cx="0" cy="0" rx="1.5" ry="6" />
+        </g>
+      </g>
+
+      <g className="pp-walk-dog">
+        <g className="pp-amble">
+          {/* far legs */}
+          <g className="pp-leg-g alt"><rect className="pp-leg-far" x="20" y="58" width="9" height="22" rx="4.5" /></g>
+          <g className="pp-leg-g"><rect className="pp-leg-far" x="50" y="58" width="9" height="22" rx="4.5" /></g>
+
+          {/* tail, up and gently wagging */}
+          <g className="pp-tail-g"><path className="pp-tail-shape" d="M18 46 Q6 40 10 26" /></g>
+
+          {/* chunky body */}
+          <rect className="pp-fill" x="16" y="38" width="52" height="26" rx="13" />
+
+          {/* near legs */}
+          <g className="pp-leg-g"><rect className="pp-fill" x="28" y="58" width="10" height="23" rx="5" /></g>
+          <g className="pp-leg-g alt"><rect className="pp-fill" x="56" y="58" width="10" height="23" rx="5" /></g>
+
+          {/* head, lifted toward the butterfly */}
+          <g className="pp-head">
+            <rect className="pp-fill" x="56" y="24" width="16" height="22" rx="8" />
+            <circle className="pp-fill" cx="72" cy="28" r="15" />
+            <ellipse className="pp-fill" cx="86" cy="32" rx="8" ry="6.5" />
+            <circle className="pp-nose-dot" cx="92" cy="29" r="2.4" />
+            <circle className="pp-nose-dot" cx="77" cy="24" r="2.2" />
+            <path className="pp-mouth" d="M84 36 Q88 39 91 36" />
+            <path className="pp-ear-shape" d="M66 18 Q56 20 55 34 Q55 44 67 37 Z" />
+          </g>
+        </g>
+      </g>
+    </svg>
+  );
+}
+
 function Gate({ onGuest, onMember, savedOwner, savedDogs, savedAvatars, onResume }) {
   return (
     <div className="pp-gate pp-gate-book">
       <PawMark big color="#6D3DD1" />
-      <h1 className="pp-setup-title pp-book-logo">PawPrints</h1>
+      <h1 className="pp-setup-title pp-prints-logo">PawPrints</h1>
+      <WalkingDog />
       <p className="pp-setup-sub">Your dog's world. Paw Friends, memories, trusted help — and adventures through PawPark.</p>
+      {savedDogs?.length > 0 && (
+        <button className="pp-gatecard resume" onClick={onResume}>
+          <div className="pp-stack">
+            {savedDogs.slice(0, 3).map((d) => (
+              <Avatar key={d.name} name={d.name} size={40} src={savedAvatars?.[d.name]} />
+            ))}
+          </div>
+          <div>
+            <strong>Welcome back</strong>
+            <span>
+              Continue as {savedDogs.map((d) => d.name).join(" & ")}
+              {savedOwner?.email ? ` · ${savedOwner.email}` : ""}
+            </span>
+          </div>
+        </button>
+      )}
+
       <button className="pp-gatecard book-primary" onClick={onMember}>
         <div className="pp-gate-mark book"><PawMark color="#6D3DD1" /></div>
         <div><strong>Create a Paw ID</strong><span>Meet your best friend, build their profile and join the Paw community.</span></div>
@@ -2738,7 +2817,7 @@ function PawTogether({ dog, invitations, avatars, onSniff, onCreate, onRespond, 
   const mine = invitations.filter((i)=>i.mine);
   const cards = tab === "mine" ? mine : community;
   return <div className="pp-together-page">
-    <div className="pp-book-head"><h2>Paw Together</h2><p>Paw Friends do more than follow each other. They actually show up. 💜</p></div>
+    <div className="pp-prints-head"><h2>Paw Together</h2><p>Paw Friends do more than follow each other. They actually show up. 💜</p></div>
     <div className="pp-action-grid">{Object.entries(PAW_TOGETHER_TYPES).map(([key,m]) => <button key={key} onClick={()=>onCreate(key)}><span>{m.icon}</span><strong>{m.title}</strong><small>{key === "sleepover" ? "Ask trusted friends for a cozy stay" : key === "host" ? "Let Paw Friends know you can help" : key === "adventure" ? "Invite friends to explore together" : "Put out a friendly play invitation"}</small></button>)}</div>
     <div className="pp-sniff-explain">👃 <strong>Sniff = I'm interested.</strong> It starts a conversation — it never commits anyone.</div>
     <div className="pp-seg"><button className={tab==="community"?"on":""} onClick={()=>setTab("community")}>Community invitations</button><button className={tab==="mine"?"on":""} onClick={()=>setTab("mine")}>My invitations {mine.length ? <em className="pp-segcount">{mine.length}</em>:null}</button></div>
@@ -2805,6 +2884,44 @@ function RangerBadge({ muted, large }) {
 }
 
 /* ---------------------------------- shell ---------------------------------- */
+
+/* In a production build a render error shows a blank page with nothing in the
+   UI to explain it. This turns that into a readable message. */
+class AppErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error("PawPrints crashed:", error, info);
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="pp-crash">
+        <h2>Something broke on this screen</h2>
+        <p className="pp-crash-msg">{String(this.state.error?.message || this.state.error)}</p>
+        <button className="pp-primary" onClick={() => this.setState({ error: null })}>Try again</button>
+        <button
+          className="pp-ghost"
+          onClick={() => {
+            try {
+              Object.keys(localStorage)
+                .filter((k) => k.startsWith("pawpark:"))
+                .forEach((k) => localStorage.removeItem(k));
+            } catch {}
+            location.reload();
+          }}
+        >
+          Reset saved data and reload
+        </button>
+      </div>
+    );
+  }
+}
 
 function Shell({ children }) {
   return (
@@ -2893,6 +3010,78 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-gatecard span{display:block;font-size:13.5px;color:var(--dim);line-height:1.45}
 .pp-gate-mark{flex:none;width:44px;height:44px;display:grid;place-items:center;background:#fff;border-radius:13px}
 .pp-gate-mark.ghost{opacity:.4}
+/* landing walk animation */
+.pp-walk{width:100%;height:96px;display:block;margin:6px 0 18px;overflow:visible}
+.pp-walk-ground{stroke:#E4DBF6;stroke-width:2;stroke-dasharray:3 7;stroke-linecap:round}
+.pp-walk-print{fill:#6D3DD1;opacity:0;animation:printfade 8.8s linear infinite backwards}
+@keyframes printfade{0%{opacity:0;transform:scale(.88)}4%{opacity:.56;transform:scale(1)}76%{opacity:.28}100%{opacity:0;transform:scale(.96)}}
+/* flat, solid shapes — no outlines */
+.pp-fill{fill:#7C4DDB}
+.pp-leg-far{fill:#5B34A8}
+.pp-ear-shape{fill:#5B34A8}
+.pp-tail-shape{fill:none;stroke:#7C4DDB;stroke-width:8;stroke-linecap:round}
+.pp-nose-dot{fill:#2B2140}
+.pp-mouth{fill:none;stroke:#2B2140;stroke-width:1.8;stroke-linecap:round;opacity:.7}
+.pp-wing-shape{fill:#F49CB6}
+.pp-fly-body{fill:#5B34A8}
+
+/* softer, friendlier motion */
+.pp-walk-dog{animation:amblecross 8.8s cubic-bezier(.42,0,.22,1) infinite}
+.pp-amble{transform-box:fill-box;transform-origin:50% 70%;animation:dogbob 1s ease-in-out infinite}
+.pp-leg-g{transform-box:fill-box;transform-origin:50% 4%;animation:legswing 1s cubic-bezier(.45,.05,.55,.95) infinite}
+.pp-leg-g.alt{animation-delay:-.5s}
+.pp-head{transform-box:fill-box;transform-origin:15% 85%;animation:headbop 2.7s ease-in-out infinite}
+.pp-tail-g{transform-box:fill-box;transform-origin:100% 100%;animation:tailhappy .42s ease-in-out infinite}
+.pp-fly{animation:flycross 8.8s linear infinite}
+.pp-flutter{animation:bobfly 1.35s ease-in-out infinite}
+.pp-wing{transform-box:fill-box;transform-origin:100% 50%;animation:flap .18s ease-in-out infinite alternate}
+.pp-wing.right{transform-origin:0% 50%;animation-name:flapr}
+
+@keyframes amblecross{
+  0%{transform:translateX(-100px)}
+  100%{transform:translateX(330px)}
+}
+@keyframes flycross{
+  0%{transform:translate(17px,22px)}
+  16%{transform:translate(78px,16px)}
+  34%{transform:translate(148px,25px)}
+  54%{transform:translate(225px,12px)}
+  76%{transform:translate(310px,18px)}
+  100%{transform:translate(447px,22px)}
+}
+@keyframes bobfly{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes flap{from{transform:rotate(8deg) scaleX(1)}to{transform:rotate(-4deg) scaleX(.42)}}
+@keyframes flapr{from{transform:rotate(-8deg) scaleX(1)}to{transform:rotate(4deg) scaleX(.42)}}
+@keyframes dogbob{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  25%{transform:translateY(-1.2px) rotate(-.6deg)}
+  50%{transform:translateY(-2.8px) rotate(0deg)}
+  75%{transform:translateY(-1.2px) rotate(.6deg)}
+}
+@keyframes legswing{
+  0%{transform:rotate(-16deg) translateY(0)}
+  50%{transform:rotate(15deg) translateY(.6px)}
+  100%{transform:rotate(-16deg) translateY(0)}
+}
+@keyframes headbop{
+  0%,100%{transform:translateY(0) rotate(0deg)}
+  18%{transform:translateY(-1.2px) rotate(-5deg)}
+  36%{transform:translateY(-.2px) rotate(-2deg)}
+  58%{transform:translateY(.4px) rotate(1.2deg)}
+  74%{transform:translateY(-.8px) rotate(-2.8deg)}
+}
+@keyframes tailhappy{
+  0%{transform:rotate(-16deg)}
+  25%{transform:rotate(4deg)}
+  50%{transform:rotate(18deg)}
+  75%{transform:rotate(7deg)}
+  100%{transform:rotate(-12deg)}
+}
+
+@media (prefers-reduced-motion:reduce){.pp-walk-print{opacity:.4}.pp-walk-dog{transform:translateX(110px)}.pp-fly{transform:translate(232px,20px)}}
+.pp-crash{max-width:420px;margin:60px auto;padding:26px;text-align:center;font-family:'Nunito',system-ui,sans-serif}
+.pp-crash h2{font-family:'Bricolage Grotesque',sans-serif;font-size:22px;margin-bottom:10px}
+.pp-crash-msg{background:#FBF1F1;border-radius:12px;padding:12px;font-size:13px;color:#8A4A4A;word-break:break-word;margin-bottom:16px}
 .pp-gate-foot{text-align:center;color:var(--dim);font-size:12.5px;letter-spacing:.03em;margin-top:20px}
 .pp-guestdot{width:9px;height:9px;border-radius:50%;background:var(--dim);margin-left:7px;flex:none}
 .pp-guestpanel{text-align:center;padding:34px 18px}
@@ -2901,10 +3090,10 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-guest-emblem{display:grid;place-items:center;margin-bottom:6px;opacity:.9}
 .pp-inline-cta{font-style:normal;color:var(--moss);font-weight:700}
 
-/* pawbook — the purple world */
-.pp-book-head{margin-bottom:18px}
-.pp-book-head h2{font-size:27px;color:var(--violet)}
-.pp-book-head p{margin:3px 0 0;font-size:13px;color:var(--dim)}
+/* pawprints — the purple world */
+.pp-prints-head{margin-bottom:18px}
+.pp-prints-head h2{font-size:27px;color:var(--violet)}
+.pp-prints-head p{margin:3px 0 0;font-size:13px;color:var(--dim)}
 .pp-together{background:var(--violet-soft);border-radius:18px;padding:16px;margin-bottom:24px}
 .pp-together h3{font-size:17px;color:var(--violet)}
 .pp-together-sub{font-size:13.5px;color:var(--dim);margin:6px 0 14px;line-height:1.45}
@@ -3168,14 +3357,14 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 
 /* two-world product system */
 .pp-world{min-height:100vh}
-.pawbook-world .pp-top{background:#FCFAFF;border-bottom-color:#E8DFF8}.pawbook-world .pp-brand h1{color:var(--violet)}.pawbook-world .pp-dogchip{background:var(--violet-soft);color:var(--violet);border-color:#E1D4F5}.pawbook-world .pp-main{background:linear-gradient(#FCFAFF,#FBFAF6 320px)}
+.pawprints-world .pp-top{background:#FCFAFF;border-bottom-color:#E8DFF8}.pawprints-world .pp-brand h1{color:var(--violet)}.pawprints-world .pp-dogchip{background:var(--violet-soft);color:var(--violet);border-color:#E1D4F5}.pawprints-world .pp-main{background:linear-gradient(#FCFAFF,#FBFAF6 320px)}
 .pawpark-world .pp-top{background:var(--paper)}
 .pp-subnav{display:flex;gap:8px;padding:8px 18px 0;background:var(--paper)}.pp-subnav button{flex:1;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px;font:700 12px 'Nunito';color:var(--dim)}.pp-subnav button.on{background:var(--sage);color:var(--moss);border-color:#CAD8C7}
 .pp-main-tabs button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10.5px}.pp-main-tabs button span{font-size:16px;line-height:1}.pp-main-tabs .pp-plus-tab{flex:.72}.pp-main-tabs .pp-plus-tab b{display:grid;place-items:center;background:var(--violet);color:#fff;border-radius:50%;width:42px;height:42px;font:700 25px 'Bricolage Grotesque';margin-top:-19px;box-shadow:0 5px 18px rgba(109,61,209,.25)}.pawpark-world .pp-main-tabs .pp-plus-tab b{background:var(--moss)}
-.pawbook-world .pp-tabs button.on{background:var(--violet-soft);color:var(--violet)}.pawbook-world .pp-tabs em{background:var(--violet)}
+.pawprints-world .pp-tabs button.on{background:var(--violet-soft);color:var(--violet)}.pawprints-world .pp-tabs em{background:var(--violet)}
 
 /* PawPrints profile */
-.pp-book-logo{color:var(--violet)}.pp-gate-book{background:linear-gradient(180deg,#FCFAFF 0,#FBFAF6 72%);min-height:100vh}.pp-gatecard.book-primary{border-color:#D9C8F2;background:var(--violet-soft)}.pp-gate-mark.book{background:#fff}.pp-two-worlds{display:flex;justify-content:space-between;gap:8px;margin:14px 0;font-size:11px;font-weight:700}.pp-two-worlds span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 9px}
+.pp-prints-logo{color:var(--violet)}.pp-gate-book{background:linear-gradient(180deg,#FCFAFF 0,#FBFAF6 72%);min-height:100vh}.pp-gatecard.book-primary{border-color:#D9C8F2;background:var(--violet-soft)}.pp-gate-mark.book{background:#fff}.pp-two-worlds{display:flex;justify-content:space-between;gap:8px;margin:14px 0;font-size:11px;font-weight:700}.pp-two-worlds span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 9px}
 .pp-account-purple .pp-setup-title{color:var(--violet)}
 .pp-bioedit{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;font:400 14px 'Nunito';resize:vertical;background:#fff}.pp-bio-actions{display:flex;gap:8px;align-items:center}.pp-inlinebtn{width:auto!important;flex:1;margin-top:8px!important}.pp-mini-note{font-size:11px;color:var(--dim);font-weight:700}.pp-open-grid{display:flex;flex-wrap:wrap;gap:8px}.pp-open-chip{border:1px solid #DCCFF2;background:#fff;color:var(--dim);border-radius:999px;padding:8px 11px;font:700 12px 'Nunito'}.pp-open-chip.on{background:var(--violet-soft);border-color:#CBB6EF;color:var(--violet)}.pp-open-to{margin:16px 0 22px}.pp-privacy-dot{position:absolute;right:7px;top:7px;background:rgba(255,255,255,.92);border-radius:999px;padding:3px 6px;font-size:10px}.pp-badges.compact{grid-template-columns:repeat(4,1fr)}.pp-badges.compact .pp-badge{padding:8px 3px}.pp-badges.compact .pp-badge span{display:none}
 .pp-feed-hero{background:linear-gradient(135deg,#F0E8FF,#FBF8FF);border:1px solid #E3D7F5;border-radius:20px;padding:18px;margin-bottom:18px}.pp-feed-hero h3{font-size:23px;margin:4px 0 4px}.pp-feed-hero p{margin:0;color:var(--dim);font-size:13.5px}.pp-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--violet);font-weight:800}.pp-hero-post{margin-top:14px}
