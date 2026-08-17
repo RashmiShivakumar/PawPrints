@@ -948,6 +948,8 @@ function PawPrintsInner() {
   const [inviteComposer, setInviteComposer] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
+  const [profileRequest, setProfileRequest] = useState(null);
 
   const [matches, setMatches] = useState(null);
   const [matching, setMatching] = useState(false);
@@ -1406,6 +1408,14 @@ Two sentences maximum, under 30 words total. Warm and specific — pull from the
     persist({ notifications: next });
   };
 
+  const openDiscoveredProfile = (name) => {
+    setDiscoverOpen(false);
+    setProfileRequest({ name, token: Date.now() });
+    setOpenTrail(null);
+    setView("pawprints");
+    setPawprintsTab("friends");
+  };
+
   /* ---- claude: would these two dogs actually get along? ---- */
   const checkBuddy = async (other) => {
     setBuddy({ other, verdict: null });
@@ -1563,6 +1573,9 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
             </div>
           </div>
           <div className="pp-head-actions">
+            <button className="pp-search-btn" onClick={() => setDiscoverOpen(true)} aria-label="Search dog profiles">
+              <span aria-hidden="true">🔍</span>
+            </button>
             {!dog.guest && (
               <button className="pp-notify-btn" onClick={openNotifications} aria-label="Open notifications">
                 <span aria-hidden="true">🔔</span>
@@ -1669,6 +1682,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
               onOpenBarks={setBarkPost}
               tab={pawprintsTab}
               onTab={setPawprintsTab}
+              profileRequest={profileRequest}
               onJoin={() => { setMode("member"); setDogs([]); setActiveId(null); setComposing({ mode: "account" }); }}
             />
           ) : view === "profile" ? (
@@ -1755,6 +1769,17 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
         />
       )}
 
+      {discoverOpen && (
+        <DogSearchPanel
+          isGuest={dog.guest}
+          householdNames={realDogs.map((d) => d.name)}
+          friends={friends}
+          onToggleFriend={toggleFriend}
+          onOpenProfile={openDiscoveredProfile}
+          onClose={() => setDiscoverOpen(false)}
+        />
+      )}
+
       {composer && (
           <Composer
             dog={dog}
@@ -1813,7 +1838,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
 
 /* -------------------------------- onboarding ------------------------------- */
 
-function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHousehold, onAddSibling, householdCount, stamps, posts, photos, onCompose, pledged, bio, bioLoading, onWriteBio, onSaveBio, prefs, onTogglePref, readOnly, connected, onToggleFriend, mutuals, viewerGuest = false }) {
+function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHousehold, onAddSibling, householdCount, stamps, posts, photos, onCompose, pledged, bio, bioLoading, onWriteBio, onSaveBio, prefs, onTogglePref, readOnly, connected, onToggleFriend, mutuals, viewerGuest = false, friendCount = 0 }) {
   const mine = stamps.filter((s) => !s.who || s.who.includes(subject.name));
   const miles = mine.reduce((a, s) => a + s.miles, 0);
   const myPosts = posts.filter((p) => p.dog.includes(subject.name));
@@ -1855,9 +1880,9 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
       </div>
 
       <div className="pp-dp-stats">
-        <div><strong>{connected ? "✓" : myPosts.length}</strong><span>{connected ? "Paw Friend" : "Posts"}</span></div>
+        <div><strong>{myPosts.length}</strong><span>Posts</span></div>
+        <div><strong>{friendCount}</strong><span>Paw Friends</span></div>
         <div><strong>{mine.length}</strong><span>Adventures</span></div>
-        <div><strong>{miles.toFixed(1)}</strong><span>Miles</span></div>
         <div><strong>{paws}</strong><span>Paws</span></div>
       </div>
 
@@ -1973,7 +1998,7 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
   );
 }
 
-function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling, posts, photos, friends, avatars, onSetAvatar, onToggleFriend, onCompose, stamps, pledged, bios, bioLoading, onWriteBio, onSaveBio, pawPrefs, onTogglePref, reactions, onReact, comments, onOpenBarks, tab, onTab, onJoin }) {
+function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling, posts, photos, friends, avatars, onSetAvatar, onToggleFriend, onCompose, stamps, pledged, bios, bioLoading, onWriteBio, onSaveBio, pawPrefs, onTogglePref, reactions, onReact, comments, onOpenBarks, tab, onTab, onJoin, profileRequest }) {
   const household = dog.pack ? dog.members.map((m) => m.name) : [dog.name];
   const others = DEMO_DOGS.filter((d) => !household.includes(d.name));
   const viewerFriends = dog.guest ? [] : friends;
@@ -1986,6 +2011,14 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
     return false;
   };
   const visibleOthers = others.filter((o) => canViewBuddy(o.name));
+  const [friendSearch, setFriendSearch] = useState("");
+  const friendTabDogs = dog.guest
+    ? visibleOthers
+    : others.filter((o) => viewerFriends.includes(o.name) && canViewBuddy(o.name));
+  const filteredFriendTabDogs = friendTabDogs.filter((o) => {
+    const q = friendSearch.trim().toLowerCase();
+    return !q || o.name.toLowerCase().includes(q) || o.breed.toLowerCase().includes(q);
+  });
   const members = (houseDogs && houseDogs.length ? houseDogs : (dog.pack ? dog.members : [dog]));
   const [packView, setPackView] = useState(members[0]?.name);
   useEffect(() => {
@@ -1994,7 +2027,25 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
   const whose = dog.pack ? packView : dog.name;
   const selectDog = (name) => (dog.pack ? setPackView(name) : onSwitchDog(name));
   const [viewing, setViewing] = useState(null);
+
+  useEffect(() => {
+    if (profileRequest?.name) setViewing(profileRequest.name);
+  }, [profileRequest?.token]);
+
   const subject = members.find((m) => m.name === whose) || members[0];
+
+  const openFeedDog = (name) => {
+    if (household.includes(name)) {
+      selectDog(name);
+      onTab("profile");
+      return;
+    }
+    if (canViewBuddy(name)) {
+      setViewing(name);
+      return;
+    }
+    onTab("friends");
+  };
   const avatarFor = (name) => avatars?.[name] || BUDDY_PHOTOS[name] || MY_DOG_PHOTOS[name];
   const breedOf = (name) => DEMO_DOGS.find((d) => d.name === name)?.breed;
   const buddyGridPosts = (name) => [
@@ -2059,6 +2110,7 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
           onToggleFriend={onToggleFriend}
           mutuals={mutuals}
           viewerGuest={dog.guest}
+          friendCount={BUDDY_DATA[viewing]?.friends?.length || 0}
         />
       </div>
     );
@@ -2080,17 +2132,35 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
         <section className="pp-friends">
           <p className="pp-together-sub">
             {dog.guest
-              ? "Guest browsing is view-only. You can open Paw profiles whose owners chose Everyone."
-              : "Tap a Paw Friend to see profiles shared with Everyone or with their Paw Friends."}
+              ? "Guest browsing is view-only. Search profiles whose owners chose Everyone."
+              : "Your Paw Friends live here. Use the search above to quickly find someone when your circle gets bigger."}
           </p>
-          {visibleOthers.length === 0 && (
+
+          <div className="pp-friend-search">
+            <span aria-hidden="true">🔍</span>
+            <input
+              value={friendSearch}
+              onChange={(e) => setFriendSearch(e.target.value)}
+              placeholder={dog.guest ? "Search public profiles" : "Search my Paw Friends"}
+              aria-label={dog.guest ? "Search public profiles" : "Search Paw Friends"}
+            />
+            {friendSearch && <button onClick={() => setFriendSearch("")} aria-label="Clear search">×</button>}
+          </div>
+
+          {filteredFriendTabDogs.length === 0 && (
             <div className="pp-empty">
-              <p>No profiles available here yet.</p>
-              <p className="pp-empty-sub">{dog.guest ? "Only Everyone profiles appear for guests." : "Private profiles stay hidden until you're Paw Friends."}</p>
+              <p>{friendSearch ? "No matching dogs found." : dog.guest ? "No public profiles available yet." : "No Paw Friends yet."}</p>
+              <p className="pp-empty-sub">
+                {dog.guest
+                  ? "Only Everyone profiles appear for guests."
+                  : friendSearch
+                    ? "Try another name or breed."
+                    : "Use the search icon at the top to discover dogs and make Paw Friends."}
+              </p>
             </div>
           )}
-          {visibleOthers.map((o) => {
-            const connected = viewerFriends.includes(o.name);
+
+          {filteredFriendTabDogs.map((o) => {
             const visibility = profileVisibilityOf(o.name);
             return (
               <div key={o.name} className="pp-friendrow">
@@ -2102,11 +2172,7 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
                     <em>{visibility === "everyone" ? "🌎 Everyone" : "💜 Paw Friends"} · {(SEEDED_PREFS[o.name]?.adventure ? "Adventures" : "Quiet hangs")}</em>
                   </div>
                 </button>
-                {!dog.guest && (
-                  <button className={connected ? "pp-connbtn on" : "pp-connbtn"} onClick={() => onToggleFriend(o.name)}>
-                    {connected ? "Paw Friend" : "Add friend"}
-                  </button>
-                )}
+                {!dog.guest && <span className="pp-friend-status">Paw Friend ✓</span>}
               </div>
             );
           })}
@@ -2133,7 +2199,7 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
               : `Planning for ${dog.name} · Household & account ›`}
           </button>
         </div>
-        <DogProfile subject={subject} avatarSrc={avatars?.[subject.name]} onSetAvatar={onSetAvatar} stamps={stamps} posts={posts} photos={allPhotos} onCompose={onCompose} pledged={pledged} bio={bios[subject.name]} bioLoading={bioLoading} onWriteBio={onWriteBio} onSaveBio={onSaveBio} prefs={pawPrefs[subject.name]} onTogglePref={onTogglePref} onOpenHousehold={onOpenHousehold} onAddSibling={onAddSibling} householdCount={members.length}/>
+        <DogProfile subject={subject} avatarSrc={avatars?.[subject.name]} onSetAvatar={onSetAvatar} stamps={stamps} posts={posts} photos={allPhotos} onCompose={onCompose} pledged={pledged} bio={bios[subject.name]} bioLoading={bioLoading} onWriteBio={onWriteBio} onSaveBio={onSaveBio} prefs={pawPrefs[subject.name]} onTogglePref={onTogglePref} onOpenHousehold={onOpenHousehold} onAddSibling={onAddSibling} householdCount={members.length} friendCount={friends.length}/>
       </>)}
 
       {tab === "feed" && <>
@@ -2146,7 +2212,13 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
           {feed.map((p) => {
             const addedBarks=(comments[p.id] || []).filter((c) => c.added).length;
             return <li key={p.id} className={p.mine ? "pp-post mine" : "pp-post"}>
-              <div className="pp-post-head"><Avatar name={p.dog} size={40} src={avatarFor(p.dog)} breed={breedOf(p.dog)}/><div><strong>{p.dog}</strong><span>{p.breed} · {p.when}</span></div>{p.mine && <span className="pp-mine-tag">{p.visibility === "only-me" ? "🔒 Only me" : p.visibility === "everyone" ? "🌎 Everyone" : "💜 Paw Friends"}</span>}</div>
+              <div className="pp-post-head">
+                <button className="pp-post-author" onClick={() => openFeedDog(p.dog)} aria-label={`Open ${p.dog}'s profile`}>
+                  <Avatar name={p.dog} size={40} src={avatarFor(p.dog)} breed={breedOf(p.dog)}/>
+                  <div><strong>{p.dog}</strong><span>{p.breed} · {p.when}</span></div>
+                </button>
+                {p.mine && <span className="pp-mine-tag">{p.visibility === "only-me" ? "🔒 Only me" : p.visibility === "everyone" ? "🌎 Everyone" : "💜 Paw Friends"}</span>}
+              </div>
               {allPhotos?.[p.id] ? (p.media === "video" ? <video src={allPhotos[p.id]} controls playsInline className="pp-post-media"/> : <img src={allPhotos[p.id]} alt="" className="pp-post-media"/>) : !p.mine ? <div className="pp-post-media pp-scenewrap"><SceneArt seed={p.id}/></div> : null}
               <p className="pp-post-body">{p.caption}</p>
               {p.trail && <div className="pp-post-trail"><PawMark color="#6D3DD1"/><div><strong>{p.trail}</strong><span>{p.miles} mi completed · via PawPark 🌲</span></div></div>}
@@ -2388,6 +2460,86 @@ function AccountMenu({ dogs, owner, avatars, activeId, isGuest, onSwitch, onHous
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DogSearchPanel({ isGuest, householdNames = [], friends = [], onToggleFriend, onOpenProfile, onClose }) {
+  const [query, setQuery] = useState("");
+
+  const results = DEMO_DOGS.filter((d) => !householdNames.includes(d.name))
+    .filter((d) => {
+      const visibility = BUDDY_DATA[d.name]?.profileVisibility || "everyone";
+      if (visibility === "everyone") return true;
+      if (!isGuest && visibility === "friends" && friends.includes(d.name)) return true;
+      return false;
+    })
+    .filter((d) => {
+      const q = query.trim().toLowerCase();
+      return !q || d.name.toLowerCase().includes(q) || d.breed.toLowerCase().includes(q);
+    });
+
+  return (
+    <div className="pp-scrim pp-sheet-scrim" onClick={onClose}>
+      <div className="pp-sheet pp-dog-search-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="pp-sheet-grip" />
+        <div className="pp-notification-head">
+          <div>
+            <h3>Find dogs</h3>
+            <p>{isGuest ? "Browse public Paw profiles." : "Discover new dogs and grow your Paw Friend circle."}</p>
+          </div>
+          <button className="pp-notification-close" onClick={onClose} aria-label="Close search">×</button>
+        </div>
+
+        <div className="pp-global-dog-search">
+          <span aria-hidden="true">🔍</span>
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by dog name or breed"
+            aria-label="Search dog profiles"
+          />
+          {query && <button onClick={() => setQuery("")} aria-label="Clear search">×</button>}
+        </div>
+
+        <div className="pp-search-results">
+          {results.length === 0 ? (
+            <div className="pp-empty">
+              <p>No matching public profiles.</p>
+              <p className="pp-empty-sub">Try another dog name or breed.</p>
+            </div>
+          ) : (
+            results.map((d) => {
+              const connected = friends.includes(d.name);
+              const visibility = BUDDY_DATA[d.name]?.profileVisibility || "everyone";
+              return (
+                <div className="pp-search-dog-row" key={d.name}>
+                  <button className="pp-search-dog-main" onClick={() => onOpenProfile(d.name)}>
+                    <Avatar name={d.name} size={48} src={BUDDY_PHOTOS[d.name]} breed={d.breed} />
+                    <div>
+                      <strong>{d.name}</strong>
+                      <span>{d.breed}</span>
+                      <em>{visibility === "everyone" ? "🌎 Everyone" : "💜 Paw Friends"}</em>
+                    </div>
+                  </button>
+
+                  {!isGuest && (
+                    <button
+                      className={connected ? "pp-connbtn on" : "pp-connbtn"}
+                      onClick={() => onToggleFriend(d.name)}
+                    >
+                      {connected ? "Paw Friend ✓" : "Add friend"}
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {isGuest && <p className="pp-notification-foot">Guest search is view-only. Create a Paw ID to make Paw Friends.</p>}
       </div>
     </div>
   );
@@ -3690,7 +3842,9 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-sheet-actions>button:hover{background:var(--sage)}
 .pp-sheet-logout{color:#8A4A4A !important;font-weight:700 !important}
 .pp-head-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
-.pp-notify-btn{position:relative;width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;border-radius:50%;cursor:pointer;font-size:17px;flex:none}
+.pp-search-btn,.pp-notify-btn{position:relative;width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;border-radius:50%;cursor:pointer;font-size:17px;flex:none}
+.pp-search-btn{font-size:22px;color:var(--violet)}
+.pp-notify-btn{font-size:17px}
 .pp-notify-btn b{position:absolute;right:-2px;top:-4px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border-radius:999px;background:var(--violet);color:#fff;font:800 9px 'Nunito';box-shadow:0 0 0 2px #fff}
 .pp-notification-sheet{padding-bottom:20px}
 .pp-notification-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px}
@@ -3709,6 +3863,20 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-cheer.sent{background:var(--violet-soft);opacity:.75;cursor:default}
 .pp-notification-foot{font-size:10.5px!important;line-height:1.4;color:var(--dim);margin:12px 0 0!important;background:#F8F4FF;border-radius:10px;padding:9px}
 .pp-public-view-badge{display:inline-flex;margin-top:9px;border:1px solid #D8C9EF;background:#FBF9FE;color:#6D5B86;border-radius:999px;padding:6px 9px;font-size:10.5px;font-weight:800}
+.pp-global-dog-search,.pp-friend-search{display:flex;align-items:center;gap:8px;border:1.5px solid #DCCFF2;background:#fff;border-radius:999px;padding:9px 12px;margin:14px 0}
+.pp-global-dog-search>span,.pp-friend-search>span{font-size:20px;color:var(--violet);line-height:1}
+.pp-global-dog-search input,.pp-friend-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:600 13px 'Nunito';color:var(--ink)}
+.pp-global-dog-search>button,.pp-friend-search>button{border:0;background:none;color:var(--dim);font-size:20px;cursor:pointer;line-height:1}
+.pp-search-results{display:flex;flex-direction:column}
+.pp-search-dog-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.pp-search-dog-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0;border:0;background:none;text-align:left;padding:0;cursor:pointer}
+.pp-search-dog-main>div{display:flex;flex-direction:column;min-width:0}
+.pp-search-dog-main strong{font-size:14px}.pp-search-dog-main span{font-size:11.5px;color:var(--dim)}.pp-search-dog-main em{font-style:normal;font-size:10.5px;color:var(--violet);margin-top:2px}
+.pp-friend-status{font-size:10.5px;color:var(--violet);font-weight:800;white-space:nowrap}
+.pp-post-author{display:flex;align-items:center;gap:10px;min-width:0;border:0;background:none;padding:0;text-align:left;cursor:pointer}
+.pp-post-author>div{display:flex;flex-direction:column}
+.pp-post-author strong{text-decoration:none}.pp-post-author:hover strong{text-decoration:underline}
+
 .pp-private-profile{text-align:center;background:#FAF8FC;border:1px solid #E3DDEA;border-radius:18px;padding:28px 20px;margin-top:15px}
 .pp-private-profile>div{font-size:30px}.pp-private-profile h3{margin:8px 0 5px}.pp-private-profile p{font-size:12.5px;line-height:1.45;color:var(--dim);max-width:38ch;margin:auto}
 .pp-profile-privacy-edit{margin:18px 0 8px}
