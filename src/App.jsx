@@ -798,6 +798,7 @@ const BUDDY_DATA = {
         id: "b-rosie-video",
         media: "video",
         videoSrc: "/pawprints-dog-demo.mp4",
+        posterSrc: "/pawprints-dog-demo-poster.jpg",
         featured: true,
         caption: "Rosie has decided the tug toy is non-negotiable. A very serious park meeting is now underway. 🐾",
         paws: 47,
@@ -1027,6 +1028,101 @@ const makePack = (members) => ({
 });
 
 /* ------------------------------- components ------------------------------- */
+
+function SocialVideo({ src, poster, className = "", compact = false }) {
+  const ref = useRef(null);
+  const [muted, setMuted] = useState(true);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+
+    const tryPlay = () => {
+      video.play().catch(() => {
+        /* Some browsers wait for the first visible frame/user interaction. */
+      });
+    };
+
+    const observer = "IntersectionObserver" in window
+      ? new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.35) {
+              tryPlay();
+            } else {
+              video.pause();
+            }
+          },
+          { threshold: [0, 0.35, 0.7] }
+        )
+      : null;
+
+    if (observer) observer.observe(video);
+    else tryPlay();
+
+    return () => observer?.disconnect();
+  }, [src]);
+
+  const togglePlayback = () => {
+    const video = ref.current;
+    if (!video) return;
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+  };
+
+  return (
+    <div className={`pp-social-video ${compact ? "compact" : ""}`}>
+      <video
+        ref={ref}
+        className={className}
+        autoPlay
+        muted={muted}
+        loop
+        playsInline
+        preload="auto"
+        poster={poster}
+        onCanPlay={(e) => e.currentTarget.play().catch(() => {})}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onClick={togglePlayback}
+        aria-label="Dog video"
+      >
+        <source src={src} type="video/mp4" />
+      </video>
+
+      <button
+        type="button"
+        className="pp-video-sound"
+        onClick={(e) => {
+          e.stopPropagation();
+          const nextMuted = !muted;
+          setMuted(nextMuted);
+          if (ref.current) {
+            ref.current.muted = nextMuted;
+            ref.current.play().catch(() => {});
+          }
+        }}
+        aria-label={muted ? "Turn video sound on" : "Mute video"}
+      >
+        {muted ? "🔇" : "🔊"}
+      </button>
+
+      {!playing && (
+        <button
+          type="button"
+          className="pp-video-play"
+          onClick={(e) => {
+            e.stopPropagation();
+            ref.current?.play().catch(() => {});
+          }}
+          aria-label="Play video"
+        >
+          ▶
+        </button>
+      )}
+    </div>
+  );
+}
 
 function Avatar({ name, size = 44, src, breed }) {
   const c = inkFor(name);
@@ -2159,7 +2255,11 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
             <div className="pp-grid">
               {visiblePosts.filter((p) => photos?.[p.id] || p.media === "scene").map((p) => (
                 <div key={p.id} className="pp-tile photo">
-                  {photos?.[p.id] ? (p.media === "video" ? <video src={photos[p.id]} controls muted playsInline preload="metadata" className="pp-tile-media" /> : <img src={photos[p.id]} alt="" className="pp-tile-media" />) : <SceneArt seed={p.id} />}
+                  {photos?.[p.id] ? (
+                    p.media === "video"
+                      ? <SocialVideo src={photos[p.id]} poster={p.posterSrc || (p.id === "b-rosie-video" ? "/pawprints-dog-demo-poster.jpg" : undefined)} className="pp-tile-media" compact />
+                      : <img src={photos[p.id]} alt="" className="pp-tile-media" />
+                  ) : <SceneArt seed={p.id} />}
                   {p.trail && <strong className="pp-tile-cap">{p.trail}</strong>}
                   {p.mine && p.visibility && <span className="pp-privacy-dot">{p.visibility === "only-me" ? "🔒" : p.visibility === "friends" ? "💜" : "🌎"}</span>}
                 </div>
@@ -2265,6 +2365,7 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
     });
   });
   const allPhotos = { ...seededMedia, ...photos };
+  const posterFor = (post) => post.posterSrc || (post.id === "b-rosie-video" ? "/pawprints-dog-demo-poster.jpg" : undefined);
 
   if (viewing) {
     const b = DEMO_DOGS.find((d) => d.name === viewing);
@@ -2416,7 +2517,11 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
                 {p.mine && <span className="pp-mine-tag">{p.visibility === "only-me" ? "🔒 Only me" : p.visibility === "everyone" ? "🌎 Everyone" : "💜 Paw Friends"}</span>}
                 {!p.mine && p.featured && <span className="pp-featured-tag">✨ Community spotlight</span>}
               </div>
-              {allPhotos?.[p.id] ? (p.media === "video" ? <video src={allPhotos[p.id]} controls playsInline className="pp-post-media"/> : <img src={allPhotos[p.id]} alt="" className="pp-post-media"/>) : !p.mine ? <div className="pp-post-media pp-scenewrap"><SceneArt seed={p.id}/></div> : null}
+              {allPhotos?.[p.id] ? (
+                p.media === "video"
+                  ? <SocialVideo src={allPhotos[p.id]} poster={posterFor(p)} className="pp-post-media" />
+                  : <img src={allPhotos[p.id]} alt="" className="pp-post-media"/>
+              ) : !p.mine ? <div className="pp-post-media pp-scenewrap"><SceneArt seed={p.id}/></div> : null}
               <p className="pp-post-body">{p.caption}</p>
               {p.trail && <div className="pp-post-trail"><PawMark color="#6D3DD1"/><div><strong>{p.trail}</strong><span>{p.miles} mi completed · via PawPark 🌲</span></div></div>}
               <div className="pp-post-acts">
@@ -4083,7 +4188,15 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-post-author>div{display:flex;flex-direction:column}
 .pp-post-author strong{text-decoration:none}.pp-post-author:hover strong{text-decoration:underline}
 .pp-featured-tag{margin-left:auto;align-self:flex-start;background:#F6F0FF;color:var(--violet);border:1px solid #DCCDF4;border-radius:999px;padding:4px 7px;font-size:9.5px;font-weight:800;white-space:nowrap}
-.pp-tile video.pp-tile-media{background:#17151A}
+.pp-social-video{position:relative;width:100%;background:#17151A;overflow:hidden}
+.pp-social-video .pp-post-media{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;background:#17151A;cursor:pointer}
+.pp-social-video.compact{height:100%}
+.pp-social-video.compact .pp-tile-media{display:block;width:100%;height:100%;object-fit:cover;background:#17151A;cursor:pointer}
+.pp-video-sound,.pp-video-play{position:absolute;border:0;color:#fff;background:rgba(22,19,28,.65);backdrop-filter:blur(5px);display:grid;place-items:center;cursor:pointer;z-index:2}
+.pp-video-sound{right:10px;bottom:10px;width:34px;height:34px;border-radius:50%;font-size:14px}
+.pp-video-play{left:50%;top:50%;transform:translate(-50%,-50%);width:48px;height:48px;border-radius:50%;font-size:17px;padding-left:3px}
+.pp-social-video.compact .pp-video-sound{right:5px;bottom:5px;width:27px;height:27px;font-size:11px}
+.pp-social-video.compact .pp-video-play{width:36px;height:36px;font-size:13px}
 
 
 .pp-private-profile{text-align:center;background:#FAF8FC;border:1px solid #E3DDEA;border-radius:18px;padding:28px 20px;margin-top:15px}
