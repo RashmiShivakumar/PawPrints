@@ -7,7 +7,7 @@ PawPrints is a mobile-first React prototype created for the DEV Community **Week
 It connects two related experiences:
 
 - 💜 **PawPrints** — dog profiles, Paw Friends, PawFeed, memories, invitations, notifications, and community discovery.
-- 🌲 **PawPark** — dog-aware trail planning, weather context, safety guidance, B.A.R.K. Ranger progress, and PawPassport adventure history.
+- 🌲 **PawPark** — location-aware, dog-aware trail planning, weather context, safety guidance, B.A.R.K. Ranger progress, and PawPassport adventure history.
 
 The core journey is:
 
@@ -51,20 +51,69 @@ A dog can meet a Paw Friend in PawPrints, make plans through Paw Together, head 
 
 ### 🌲 PawPark adventures
 
-- Dog-aware trail recommendations based on age, size, energy, coat and heat tolerance, mobility, social comfort, and water preferences
-- Weather-aware outing context using Open-Meteo
-- Trail details including distance, elevation, surface, shade, water, leash rules, season, and crowd notes
-- Paw-surface heat guidance
+PawPark now starts with **where the outing is happening**.
+
+The user can:
+
+- 📍 use the browser's current location
+- enter a ZIP code manually
+
+The prototype currently demonstrates two trail regions:
+
+- **Bay Area / San Francisco / Bay Point** — including Bay Area `94xxx` ZIP codes such as `94565`
+- **San Diego** — including `92126` and other `921xx` ZIP codes
+
+If location permission is unavailable during the demo, PawPark falls back to the Bay Area demo region and says so clearly. ZIP codes outside the current prototype coverage show an honest coverage message instead of pretending nationwide trail data is available.
+
+The recommendation flow is:
+
+**Location → nearby trails → dog suitability → weather → ranked recommendation**
+
+That means PawPark first narrows the seeded trail catalog to trails relevant to the selected region, then evaluates those trails using the dog's profile and local forecast.
+
+The dog-aware trail ranking considers:
+
+- age
+- size
+- energy
+- coat and heat tolerance
+- mobility and joints
+- social comfort
+- water preferences
+
+Weather-aware outing context comes from **Open-Meteo**.
+
+Trail details include:
+
+- distance
+- elevation
+- surface
+- shade
+- water availability
+- leash rules
+- season and crowd notes
+- paw-surface heat guidance
+
+PawPark also includes:
+
 - PawPassport stamps and badges
 - B.A.R.K. Ranger pledge experience
-- Adventure completion flow that can become a PawPrints memory
-- Multi-dog planning where the more limited dog sets the practical ceiling for the outing
+- adventure completion that can become a PawPrints memory
+- multi-dog planning where the more limited dog sets the practical ceiling for the outing
+
+The goal is not simply to answer **“Is this trail dog-friendly?”** but to move toward **“Is this nearby trail a reasonable fit for this particular dog, in these conditions, today?”**
 
 ## Demo experience
 
 The prototype includes a seeded community of dogs with different breeds, personalities, Paw Friend relationships, privacy settings, posts, invitations, and PawPassport activity so the social experience is usable immediately.
 
 It also includes an Instagram-style demo dog video in PawFeed with muted autoplay, looping, inline playback, a poster image, and sound controls.
+
+For the PawPark location demo, try:
+
+- **Use my current location** while in the Bay Area
+- enter **`94565`** for Bay Area / Bay Point coverage
+- enter **`92126`** for San Diego coverage
 
 ## Product principles
 
@@ -84,6 +133,8 @@ The prototype focuses on:
 - React
 - Vite
 - Open-Meteo weather data
+- Browser Geolocation API for current-location trail selection
+- ZIP-based prototype region selection
 - Browser/local storage for prototype persistence
 - Embedded demo media for reliable challenge-demo playback
 
@@ -119,9 +170,10 @@ A production version would need:
 - object storage and CDN delivery for user photos and videos
 - secure server-side AI integrations
 - moderation, reporting, and abuse-prevention tools
-- production trail and location data coverage beyond the seeded prototype
+- production trail and location data coverage beyond the seeded Bay Area and San Diego prototype regions
+- real geocoding and broader trail discovery rather than ZIP-to-demo-region mapping
 
-For the challenge prototype, community profiles, notifications, social activity, and some interactions are intentionally seeded or stored locally so the complete product flow can be demonstrated without a backend.
+For the challenge prototype, community profiles, notifications, social activity, trail regions, and some interactions are intentionally seeded or stored locally so the complete product flow can be demonstrated without a backend.
 
 ## AI-assisted development
 
