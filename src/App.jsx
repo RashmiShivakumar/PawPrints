@@ -1007,14 +1007,39 @@ function PawPrintsInner() {
   const markInMemory = (name) => {
     const target = dogs.find((d) => d.name === name);
     if (!target) return;
+
     const makeMemorial = !target.memorial;
-    const next = dogs.map((d) =>
+    const defaultPrefs = { play: true, adventure: true, sleepover: false, host: false };
+    const currentPrefs = pawPrefs[name] || defaultPrefs;
+
+    const nextDogs = dogs.map((d) =>
       d.name === name
-        ? { ...d, memorial: makeMemorial, memorialAt: makeMemorial ? new Date().toISOString() : undefined }
+        ? makeMemorial
+          ? {
+              ...d,
+              memorial: true,
+              memorialAt: new Date().toISOString(),
+              memorialPrefsBackup: currentPrefs,
+            }
+          : {
+              ...d,
+              memorial: false,
+              memorialAt: undefined,
+              memorialPrefsBackup: undefined,
+            }
         : d
     );
-    setDogs(next);
-    persist({ dogs: next });
+
+    const nextPrefs = {
+      ...pawPrefs,
+      [name]: makeMemorial
+        ? { play: false, adventure: false, sleepover: false, host: false }
+        : (target.memorialPrefsBackup || defaultPrefs),
+    };
+
+    setDogs(nextDogs);
+    setPawPrefs(nextPrefs);
+    persist({ dogs: nextDogs, pawPrefs: nextPrefs });
     setComposing(null);
   };
 
@@ -1742,21 +1767,55 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
         )}
       </section>
 
-      <section className="pp-open-to">
-        <div className="pp-dp-gridhead"><h3>Open to</h3>{!readOnly && <span className="pp-mini-note">You control this</span>}</div>
-        <div className="pp-open-grid">
-          {Object.entries(PAW_TOGETHER_TYPES).map(([key, meta]) => {
-            const on = !!openPrefs[key];
-            if (readOnly && !on) return null;
-            return readOnly ? (
-              <span key={key} className="pp-open-chip on">{meta.icon} {meta.short}</span>
-            ) : (
-              <button key={key} className={on ? "pp-open-chip on" : "pp-open-chip"} onClick={() => onTogglePref(subject.name, key)}>
-                {meta.icon} {meta.short} {on ? "✓" : "+"}
-              </button>
-            );
-          })}
+      <section className={`pp-open-to ${subject.memorial ? "memorial-disabled" : ""}`}>
+        <div className="pp-dp-gridhead">
+          <h3>Open to</h3>
+          {!readOnly && (
+            <span className="pp-mini-note">
+              {subject.memorial ? "Paused for In Memory profiles" : "You control this"}
+            </span>
+          )}
         </div>
+
+        {subject.memorial ? (
+          <>
+            <div className="pp-open-grid">
+              {Object.entries(PAW_TOGETHER_TYPES).map(([key, meta]) => (
+                <button
+                  type="button"
+                  key={key}
+                  className="pp-open-chip pp-open-disabled"
+                  disabled
+                  aria-disabled="true"
+                >
+                  {meta.icon} {meta.short}
+                </button>
+              ))}
+            </div>
+            <p className="pp-open-memorial-note">
+              🌈 In Memory profiles keep their friendships and memories, but they aren't open to new play, adventure, sleepover or hosting invitations.
+            </p>
+          </>
+        ) : (
+          <div className="pp-open-grid">
+            {Object.entries(PAW_TOGETHER_TYPES).map(([key, meta]) => {
+              const on = !!openPrefs[key];
+              if (readOnly && !on) return null;
+              return readOnly ? (
+                <span key={key} className="pp-open-chip on">{meta.icon} {meta.short}</span>
+              ) : (
+                <button
+                  type="button"
+                  key={key}
+                  className={on ? "pp-open-chip on" : "pp-open-chip"}
+                  onClick={() => onTogglePref(subject.name, key)}
+                >
+                  {meta.icon} {meta.short} {on ? "✓" : "+"}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section>
@@ -3547,7 +3606,10 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 /* PawPrints profile */
 .pp-prints-logo{color:var(--violet)}.pp-gate-book{background:linear-gradient(180deg,#FCFAFF 0,#FBFAF6 72%);min-height:100vh}.pp-gatecard.book-primary{border-color:#D9C8F2;background:var(--violet-soft)}.pp-gate-mark.book{background:#fff}.pp-two-worlds{display:flex;justify-content:space-between;gap:8px;margin:14px 0;font-size:11px;font-weight:700}.pp-two-worlds span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 9px}
 .pp-account-purple .pp-setup-title{color:var(--violet)}
-.pp-bioedit{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;font:400 14px 'Nunito';resize:vertical;background:#fff}.pp-bio-actions{display:flex;gap:8px;align-items:center}.pp-inlinebtn{width:auto!important;flex:1;margin-top:8px!important}.pp-mini-note{font-size:11px;color:var(--dim);font-weight:700}.pp-open-grid{display:flex;flex-wrap:wrap;gap:8px}.pp-open-chip{border:1px solid #DCCFF2;background:#fff;color:var(--dim);border-radius:999px;padding:8px 11px;font:700 12px 'Nunito'}.pp-open-chip.on{background:var(--violet-soft);border-color:#CBB6EF;color:var(--violet)}.pp-open-to{margin:16px 0 22px}.pp-privacy-dot{position:absolute;right:7px;top:7px;background:rgba(255,255,255,.92);border-radius:999px;padding:3px 6px;font-size:10px}.pp-badges.compact{grid-template-columns:repeat(4,1fr)}.pp-badges.compact .pp-badge{padding:8px 3px}.pp-badges.compact .pp-badge span{display:none}
+.pp-bioedit{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;font:400 14px 'Nunito';resize:vertical;background:#fff}.pp-bio-actions{display:flex;gap:8px;align-items:center}.pp-inlinebtn{width:auto!important;flex:1;margin-top:8px!important}.pp-mini-note{font-size:11px;color:var(--dim);font-weight:700}.pp-open-grid{display:flex;flex-wrap:wrap;gap:8px}.pp-open-chip{border:1px solid #DCCFF2;background:#fff;color:var(--dim);border-radius:999px;padding:8px 11px;font:700 12px 'Nunito'}.pp-open-chip.on{background:var(--violet-soft);border-color:#CBB6EF;color:var(--violet)}
+.pp-open-chip.pp-open-disabled{opacity:.48;cursor:not-allowed;background:#F5F2F8;border-color:#DDD6E6;color:#8B8395}
+.pp-open-to.memorial-disabled{background:#FCFAFF;border:1px solid #E8DFF6;border-radius:16px;padding:14px}
+.pp-open-memorial-note{font-size:11.5px!important;color:var(--dim);line-height:1.45;margin:10px 0 0!important}.pp-open-to{margin:16px 0 22px}.pp-privacy-dot{position:absolute;right:7px;top:7px;background:rgba(255,255,255,.92);border-radius:999px;padding:3px 6px;font-size:10px}.pp-badges.compact{grid-template-columns:repeat(4,1fr)}.pp-badges.compact .pp-badge{padding:8px 3px}.pp-badges.compact .pp-badge span{display:none}
 .pp-feed-hero{background:linear-gradient(135deg,#F0E8FF,#FBF8FF);border:1px solid #E3D7F5;border-radius:20px;padding:18px;margin-bottom:18px}.pp-feed-hero h3{font-size:23px;margin:4px 0 4px}.pp-feed-hero p{margin:0;color:var(--dim);font-size:13.5px}.pp-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--violet);font-weight:800}.pp-hero-post{margin-top:14px}
 .pp-mine-tag{font-size:10.5px!important;padding:4px 7px!important;max-width:none!important}
 
