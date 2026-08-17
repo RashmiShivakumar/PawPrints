@@ -1180,6 +1180,11 @@ Ground every point in the numbers above. Respond with JSON only. No preamble, no
     if (mode === "guest") {
       setDogs([]);
       setActiveId(null);
+      setComposing(null);
+      setInviteComposer(null);
+      setComposer(null);
+      setUpgrade(null);
+      setMemory(null);
       setMode(null);
       return;
     }
@@ -1382,7 +1387,17 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
           savedDogs={realDogs}
           savedAvatars={avatarMap}
           onResume={resumeSession}
-          onGuest={() => { setMode("guest"); setDogs([GUEST_DOG]); setActiveId(GUEST_DOG.name); }}
+          onGuest={() => {
+            setComposing(null);
+            setInviteComposer(null);
+            setComposer(null);
+            setUpgrade(null);
+            setMemory(null);
+            setMode("guest");
+            setDogs([GUEST_DOG]);
+            setActiveId(GUEST_DOG.name);
+            setView("trails");
+          }}
           onMember={() => { setMode("member"); setDogs([]); setActiveId(null); setComposing({ mode: "account" }); }}
         />
       </Shell>
