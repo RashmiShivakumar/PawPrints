@@ -630,6 +630,7 @@ const BUDDY_DATA = {
   Bella: {
     friends: ["Cooper", "Juniper"],
     pledged: true,
+    profileVisibility: "everyone",
     photoBreed: "retriever/golden",
     bio: "Three years old and still convinced every wave is a personal challenge. Will detour for any body of water. 🌊",
     trails: [["lands-end", "JUL 28"], ["dog-beach-ob", "AUG 2"], ["fort-funston", "AUG 9"]],
@@ -640,6 +641,7 @@ const BUDDY_DATA = {
   Cooper: {
     friends: ["Bella", "Milo", "Juniper"],
     pledged: true,
+    profileVisibility: "friends",
     photoBreed: "labrador",
     bio: "Five, stocky, and carrying a stick bigger than himself since 2021. Swims first, thinks later.",
     trails: [["dog-beach-ob", "JUL 30"], ["penasquitos", "AUG 6"]],
@@ -650,6 +652,7 @@ const BUDDY_DATA = {
   Milo: {
     friends: ["Cooper"],
     pledged: false,
+    profileVisibility: "everyone",
     photoBreed: "corgi/cardigan",
     bio: "Short legs, long back, zero self-awareness about heat. Flat and shaded or nothing.",
     trails: [["point-isabel", "AUG 4"], ["mission-trails", "AUG 11"]],
@@ -660,6 +663,7 @@ const BUDDY_DATA = {
   Juniper: {
     friends: ["Bella", "Cooper"],
     pledged: true,
+    profileVisibility: "friends",
     photoBreed: "poodle/miniature",
     bio: "Eight years old, stiff hips, and absolutely leading the way back regardless of either fact.",
     trails: [["mission-trails", "AUG 8"]],
@@ -735,6 +739,50 @@ const SEEDED_BARKS = {
     { dog: "Bella", text: "The stick is basically a tree, Cooper 😂", when: "1h" },
   ],
 };
+
+
+/* Demo notification stream. In production these events would arrive from
+   authenticated backend activity rather than local seeded community data. */
+const notificationSeedFor = (dogName = "your dog") => [
+  {
+    id: "note-profile-sniff",
+    type: "sniff",
+    icon: "👃",
+    title: "Dog sniffing",
+    text: `Cooper sniffed ${dogName}'s profile.`,
+    when: "12m",
+    read: false,
+  },
+  {
+    id: "note-invite-response",
+    type: "response",
+    icon: "💜",
+    title: "Invitation response",
+    text: `Bella wagged back at ${dogName}'s adventure invitation.`,
+    when: "38m",
+    read: false,
+  },
+  {
+    id: "note-friend-invite",
+    type: "invite",
+    icon: "🌲",
+    title: "Paw Friend invitation",
+    text: "Juniper invited Paw Friends to a slow Sunday adventure.",
+    when: "2h",
+    read: false,
+  },
+  {
+    id: "note-friend-milestone",
+    type: "milestone",
+    icon: "🏅",
+    title: "Paw Friend milestone",
+    text: "Milo earned a new PawPassport stamp at Point Isabel. Send some encouragement!",
+    when: "5h",
+    read: false,
+    cheerable: true,
+    cheered: false,
+  },
+];
 
 /* Profile photos for the seeded community, embedded so nothing depends on an
    external image service. */
@@ -898,6 +946,8 @@ function PawPrintsInner() {
   const [comments, setComments] = useState(SEEDED_BARKS);
   const [barkPost, setBarkPost] = useState(null);
   const [inviteComposer, setInviteComposer] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const [matches, setMatches] = useState(null);
   const [matching, setMatching] = useState(false);
@@ -935,6 +985,7 @@ function PawPrintsInner() {
             setInvitations(s.invitations || SEEDED_INVITATIONS);
             setPawPrefs(s.pawPrefs || {});
             setComments(s.comments || SEEDED_BARKS);
+            setNotifications(s.notifications || notificationSeedFor(saved[0]?.name));
           }
         }
       } catch {
@@ -977,7 +1028,7 @@ function PawPrintsInner() {
     try {
       await appStorage.set(
         "pawpark:profile",
-        JSON.stringify({ owner, dogs, activeId, stamps, pledged, posts, bios, friends, invitations, pawPrefs, comments, ...next })
+        JSON.stringify({ owner, dogs, activeId, stamps, pledged, posts, bios, friends, invitations, pawPrefs, comments, notifications, ...next })
       );
     } catch {
       /* storage unavailable — session still works */
@@ -992,16 +1043,18 @@ function PawPrintsInner() {
       : dogs.find((d) => d.name === activeId) || dogs[0] || null;
 
   const addDog = (d, replaceName, thenPrompt) => {
-    const withId = { ...d, id: d.id || dogId(d.name) };
+    const withId = { ...d, profileVisibility: d.profileVisibility || "everyone", id: d.id || dogId(d.name) };
     const next = replaceName
       ? dogs.map((x) => (x.name === replaceName ? { ...withId, id: x.id || withId.id } : x))
       : [...dogs, withId];
+    const starterNotifications = notifications.length ? notifications : notificationSeedFor(withId.name);
     setDogs(next);
     setActiveId(withId.name);
+    if (!notifications.length) setNotifications(starterNotifications);
     setComposing(thenPrompt ? { mode: "siblingPrompt" } : null);
     setMatches(null);
     setBriefs({});
-    persist({ dogs: next, activeId: withId.name });
+    persist({ dogs: next, activeId: withId.name, notifications: starterNotifications });
   };
 
   const markInMemory = (name) => {
@@ -1198,6 +1251,7 @@ Ground every point in the numbers above. Respond with JSON only. No preamble, no
   };
 
   const toggleFriend = (name) => {
+    if (mode === "guest") return;
     const next = friends.includes(name) ? friends.filter((f) => f !== name) : [...friends, name];
     setFriends(next);
     persist({ friends: next });
@@ -1230,8 +1284,19 @@ Ground every point in the numbers above. Respond with JSON only. No preamble, no
       interest: [{ dog: firstFriend, text: "We might be in — can you send a little more detail?", status: "pending", demo: true }],
     };
     const next = [invite, ...invitations];
+    const responseNote = {
+      id: `note-response-${id}`,
+      type: "response",
+      icon: "👃",
+      title: "Someone responded",
+      text: `${firstFriend} sniffed ${dog.name}'s invitation and sent a message.`,
+      when: "now",
+      read: false,
+    };
+    const nextNotifications = [responseNote, ...notifications];
     setInvitations(next);
-    persist({ invitations: next });
+    setNotifications(nextNotifications);
+    persist({ invitations: next, notifications: nextNotifications });
     setInviteComposer(null);
     setView("together");
   };
@@ -1257,6 +1322,7 @@ Ground every point in the numbers above. Respond with JSON only. No preamble, no
   };
 
   const addBark = (postId, text) => {
+    if (mode === "guest") return;
     const next = {
       ...comments,
       [postId]: [...(comments[postId] || []), { dog: dog.name, text: text.trim(), when: "now", added: true }],
@@ -1318,8 +1384,27 @@ Two sentences maximum, under 30 words total. Warm and specific — pull from the
     }
   };
 
-  const react = (id, kind) =>
+  const react = (id, kind) => {
+    if (mode === "guest") return;
     setReactions((r) => ({ ...r, [`${id}:${kind}`]: !r[`${id}:${kind}`] }));
+  };
+
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
+
+  const openNotifications = () => {
+    const next = notifications.map((n) => ({ ...n, read: true }));
+    setNotifications(next);
+    persist({ notifications: next });
+    setNotificationsOpen(true);
+  };
+
+  const cheerNotification = (id) => {
+    const next = notifications.map((n) =>
+      n.id === id ? { ...n, cheered: true, read: true } : n
+    );
+    setNotifications(next);
+    persist({ notifications: next });
+  };
 
   /* ---- claude: would these two dogs actually get along? ---- */
   const checkBuddy = async (other) => {
@@ -1477,19 +1562,27 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
               <p>{inPawPark ? "Explore. Adventure. Together." : "Connect. Share. Trust."}</p>
             </div>
           </div>
-          <button className="pp-dogchip" onClick={() => setMenuOpen(true)}>
-            {dog.guest ? (
-              <>
-                <span className="pp-guestdot" aria-hidden="true" />
-                <span>PawGuest</span>
-              </>
-            ) : (
-              <>
-                <Avatar name={dog.name} size={32} src={avatarMap[dog.pack ? dog.members[0].name : dog.name]} />
-                <span>{dog.name}</span>
-              </>
+          <div className="pp-head-actions">
+            {!dog.guest && (
+              <button className="pp-notify-btn" onClick={openNotifications} aria-label="Open notifications">
+                <span aria-hidden="true">🔔</span>
+                {unreadNotifications > 0 && <b>{Math.min(unreadNotifications, 9)}</b>}
+              </button>
             )}
-          </button>
+            <button className="pp-dogchip" onClick={() => setMenuOpen(true)}>
+              {dog.guest ? (
+                <>
+                  <span className="pp-guestdot" aria-hidden="true" />
+                  <span>PawGuest</span>
+                </>
+              ) : (
+                <>
+                  <Avatar name={dog.name} size={32} src={avatarMap[dog.pack ? dog.members[0].name : dog.name]} />
+                  <span>{dog.name}</span>
+                </>
+              )}
+            </button>
+          </div>
         </header>
 
         {inPawPark && !trail && (
@@ -1615,7 +1708,12 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
             <button className={view === "together" ? "on" : ""} onClick={() => setView("together")}>
               <span>🤝</span>Together
             </button>
-            <button className="pp-plus-tab" onClick={() => setComposer({ media: null })} aria-label="Create post">
+            <button
+              className="pp-plus-tab"
+              disabled={dog.guest}
+              onClick={() => !dog.guest && setComposer({ media: null })}
+              aria-label={dog.guest ? "Create a Paw ID to post" : "Create post"}
+            >
               <b>+</b>
             </button>
             <button className={inPawPark ? "on" : ""} onClick={() => setView("trails")}>
@@ -1646,6 +1744,14 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
           onAddSibling={() => { setMenuOpen(false); setComposing({ mode: "choose" }); }}
           onLogOut={logOut}
           onClose={() => setMenuOpen(false)}
+        />
+      )}
+
+      {notificationsOpen && !dog.guest && (
+        <NotificationPanel
+          notifications={notifications}
+          onCheer={cheerNotification}
+          onClose={() => setNotificationsOpen(false)}
         />
       )}
 
@@ -1707,7 +1813,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
 
 /* -------------------------------- onboarding ------------------------------- */
 
-function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHousehold, onAddSibling, householdCount, stamps, posts, photos, onCompose, pledged, bio, bioLoading, onWriteBio, onSaveBio, prefs, onTogglePref, readOnly, connected, onToggleFriend, mutuals }) {
+function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHousehold, onAddSibling, householdCount, stamps, posts, photos, onCompose, pledged, bio, bioLoading, onWriteBio, onSaveBio, prefs, onTogglePref, readOnly, connected, onToggleFriend, mutuals, viewerGuest = false }) {
   const mine = stamps.filter((s) => !s.who || s.who.includes(subject.name));
   const miles = mine.reduce((a, s) => a + s.miles, 0);
   const myPosts = posts.filter((p) => p.dog.includes(subject.name));
@@ -1738,10 +1844,13 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
         <p className="pp-dp-meta">{subject.breed} · {subject.age}</p>
         {subject.memorial && <div className="pp-memorial-note">In Memory 🌈 · keeping {subject.name}'s adventures and memories close.</div>}
         {readOnly && mutuals?.length > 0 && <p className="pp-mutual">Paw friends with {mutuals.join(" & ")}</p>}
-        {readOnly && (
+        {readOnly && !viewerGuest && (
           <button className={connected ? "pp-ghost pp-connected" : "pp-purple pp-connect"} onClick={() => onToggleFriend(subject.name)}>
             {connected ? "Paw Friends ✓" : `Add ${subject.name} as a Paw Friend`}
           </button>
+        )}
+        {readOnly && viewerGuest && (
+          <span className="pp-public-view-badge">🌎 Public profile · view only</span>
         )}
       </div>
 
@@ -1867,6 +1976,16 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
 function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling, posts, photos, friends, avatars, onSetAvatar, onToggleFriend, onCompose, stamps, pledged, bios, bioLoading, onWriteBio, onSaveBio, pawPrefs, onTogglePref, reactions, onReact, comments, onOpenBarks, tab, onTab, onJoin }) {
   const household = dog.pack ? dog.members.map((m) => m.name) : [dog.name];
   const others = DEMO_DOGS.filter((d) => !household.includes(d.name));
+  const viewerFriends = dog.guest ? [] : friends;
+  const profileVisibilityOf = (name) => BUDDY_DATA[name]?.profileVisibility || "everyone";
+  const canViewBuddy = (name) => {
+    const visibility = profileVisibilityOf(name);
+    if (visibility === "everyone") return true;
+    if (dog.guest) return false;
+    if (visibility === "friends") return viewerFriends.includes(name);
+    return false;
+  };
+  const visibleOthers = others.filter((o) => canViewBuddy(o.name));
   const members = (houseDogs && houseDogs.length ? houseDogs : (dog.pack ? dog.members : [dog]));
   const [packView, setPackView] = useState(members[0]?.name);
   useEffect(() => {
@@ -1882,7 +2001,16 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
     ...(BUDDY_PHOTOS[name] ? [{ id: `${name}-portrait`, dog: name, media: "image", paws: 0, barks: 0 }] : []),
     ...(BUDDY_DATA[name]?.trails || []).map(([tid]) => ({ id: `${name}-scene-${tid}`, dog: name, media: "scene", paws: 0, barks: 0, trail: TRAILS.find((t) => t.id === tid)?.name })),
   ];
-  const feed = [...posts.filter((p) => p.visibility !== "only-me"), ...friends.flatMap((f) => buddyPosts(f))];
+  const publicBuddyNames = DEMO_DOGS.filter((d) => profileVisibilityOf(d.name) === "everyone").map((d) => d.name);
+  const feed = dog.guest
+    ? [
+        ...posts.filter((p) => p.visibility === "everyone"),
+        ...publicBuddyNames.flatMap((name) => buddyPosts(name)),
+      ]
+    : [
+        ...posts.filter((p) => p.visibility !== "only-me"),
+        ...viewerFriends.flatMap((f) => buddyPosts(f)),
+      ];
   const seededMedia = {};
   Object.entries(BUDDY_PHOTOS).forEach(([name, url]) => {
     seededMedia[`${name}-portrait`] = url;
@@ -1893,11 +2021,45 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
 
   if (viewing) {
     const b = DEMO_DOGS.find((d) => d.name === viewing);
-    const mutuals = (BUDDY_DATA[viewing]?.friends || []).filter((f) => friends.includes(f));
+    const allowed = canViewBuddy(viewing);
+    const mutuals = (BUDDY_DATA[viewing]?.friends || []).filter((f) => viewerFriends.includes(f));
+
+    if (!allowed) {
+      return (
+        <div className="pp-prints">
+          <button className="pp-back" onClick={() => setViewing(null)}>‹ Profiles</button>
+          <div className="pp-private-profile">
+            <div>🔒</div>
+            <h3>This Paw profile is private</h3>
+            <p>Guests can only view profiles marked Everyone. Paw Friends can also view profiles shared with Paw Friends.</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="pp-prints">
-        <button className="pp-back" onClick={() => setViewing(null)}>‹ Paw Friends</button>
-        <DogProfile subject={{ ...b, id: REGISTRY[Object.keys(REGISTRY).find((k) => REGISTRY[k].name === viewing)]?.id }} avatarSrc={avatarFor(viewing)} avatarBreed={b?.breed} stamps={buddyStamps(viewing)} posts={buddyGridPosts(viewing)} photos={allPhotos} pledged={BUDDY_DATA[viewing]?.pledged} bio={BUDDY_DATA[viewing]?.bio} prefs={SEEDED_PREFS[viewing]} readOnly connected={friends.includes(viewing)} onToggleFriend={onToggleFriend} mutuals={mutuals} />
+        <button className="pp-back" onClick={() => setViewing(null)}>‹ {dog.guest ? "Public profiles" : "Paw Friends"}</button>
+        <DogProfile
+          subject={{
+            ...b,
+            id: REGISTRY[Object.keys(REGISTRY).find((k) => REGISTRY[k].name === viewing)]?.id,
+            profileVisibility: profileVisibilityOf(viewing),
+          }}
+          avatarSrc={avatarFor(viewing)}
+          avatarBreed={b?.breed}
+          stamps={buddyStamps(viewing)}
+          posts={buddyGridPosts(viewing)}
+          photos={allPhotos}
+          pledged={BUDDY_DATA[viewing]?.pledged}
+          bio={BUDDY_DATA[viewing]?.bio}
+          prefs={SEEDED_PREFS[viewing]}
+          readOnly
+          connected={viewerFriends.includes(viewing)}
+          onToggleFriend={onToggleFriend}
+          mutuals={mutuals}
+          viewerGuest={dog.guest}
+        />
       </div>
     );
   }
@@ -1907,19 +2069,47 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
       <div className="pp-prints-head"><h2>PawPrints</h2><p>Your dog's world. Your trusted community. 💜</p></div>
       <div className="pp-seg">
         <button className={tab === "feed" ? "on" : ""} onClick={() => onTab("feed")}>PawFeed</button>
-        <button className={tab === "friends" ? "on" : ""} onClick={() => onTab("friends")}>Paw Friends {friends.length > 0 && <em className="pp-segcount">{friends.length}</em>}</button>
+        <button className={tab === "friends" ? "on" : ""} onClick={() => onTab("friends")}>
+          {dog.guest ? "Public Profiles" : "Paw Friends"}
+          {!dog.guest && friends.length > 0 && <em className="pp-segcount">{friends.length}</em>}
+        </button>
         <button className={tab === "profile" ? "on" : ""} onClick={() => onTab("profile")}>{dog.guest ? "Profile" : subject.name}</button>
       </div>
 
       {tab === "friends" && (
         <section className="pp-friends">
-          <p className="pp-together-sub">Build a circle slowly. Tap a Paw Friend to see the profile, memories and adventures they chose to share.</p>
-          {others.map((o) => { const connected=friends.includes(o.name); return (
-            <div key={o.name} className="pp-friendrow">
-              <button className="pp-friendmain" onClick={() => setViewing(o.name)}><Avatar name={o.name} size={46} src={avatarFor(o.name)} breed={o.breed}/><div><strong>{o.name}</strong><span>{o.breed}</span><em>{(SEEDED_PREFS[o.name]?.play ? "Play Buddy · " : "") + (SEEDED_PREFS[o.name]?.adventure ? "Adventures" : "Quiet hangs")}</em></div></button>
-              <button className={connected ? "pp-connbtn on" : "pp-connbtn"} onClick={() => onToggleFriend(o.name)}>{connected ? "Paw Friend" : "Add friend"}</button>
+          <p className="pp-together-sub">
+            {dog.guest
+              ? "Guest browsing is view-only. You can open Paw profiles whose owners chose Everyone."
+              : "Tap a Paw Friend to see profiles shared with Everyone or with their Paw Friends."}
+          </p>
+          {visibleOthers.length === 0 && (
+            <div className="pp-empty">
+              <p>No profiles available here yet.</p>
+              <p className="pp-empty-sub">{dog.guest ? "Only Everyone profiles appear for guests." : "Private profiles stay hidden until you're Paw Friends."}</p>
             </div>
-          ); })}
+          )}
+          {visibleOthers.map((o) => {
+            const connected = viewerFriends.includes(o.name);
+            const visibility = profileVisibilityOf(o.name);
+            return (
+              <div key={o.name} className="pp-friendrow">
+                <button className="pp-friendmain" onClick={() => setViewing(o.name)}>
+                  <Avatar name={o.name} size={46} src={avatarFor(o.name)} breed={o.breed}/>
+                  <div>
+                    <strong>{o.name}</strong>
+                    <span>{o.breed}</span>
+                    <em>{visibility === "everyone" ? "🌎 Everyone" : "💜 Paw Friends"} · {(SEEDED_PREFS[o.name]?.adventure ? "Adventures" : "Quiet hangs")}</em>
+                  </div>
+                </button>
+                {!dog.guest && (
+                  <button className={connected ? "pp-connbtn on" : "pp-connbtn"} onClick={() => onToggleFriend(o.name)}>
+                    {connected ? "Paw Friend" : "Add friend"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </section>
       )}
 
@@ -1961,8 +2151,16 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
               <p className="pp-post-body">{p.caption}</p>
               {p.trail && <div className="pp-post-trail"><PawMark color="#6D3DD1"/><div><strong>{p.trail}</strong><span>{p.miles} mi completed · via PawPark 🌲</span></div></div>}
               <div className="pp-post-acts">
-                <button className={reactions[`${p.id}:paw`] ? "on" : ""} onClick={() => onReact(p.id, "paw")}>🐾 {p.paws + (reactions[`${p.id}:paw`] ? 1 : 0)} Paws</button>
-                <button onClick={() => onOpenBarks(p)}>💬 {p.barks + addedBarks} Barks</button>
+                <button
+                  disabled={dog.guest}
+                  className={reactions[`${p.id}:paw`] ? "on" : ""}
+                  onClick={() => !dog.guest && onReact(p.id, "paw")}
+                >
+                  🐾 {p.paws + (reactions[`${p.id}:paw`] ? 1 : 0)} Paws
+                </button>
+                <button disabled={dog.guest} onClick={() => !dog.guest && onOpenBarks(p)}>
+                  💬 {p.barks + addedBarks} Barks
+                </button>
               </div>
             </li>;
           })}
@@ -2195,6 +2393,56 @@ function AccountMenu({ dogs, owner, avatars, activeId, isGuest, onSwitch, onHous
   );
 }
 
+function NotificationPanel({ notifications, onCheer, onClose }) {
+  return (
+    <div className="pp-scrim pp-sheet-scrim" onClick={onClose}>
+      <div className="pp-sheet pp-notification-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="pp-sheet-grip" />
+        <div className="pp-notification-head">
+          <div>
+            <h3>Notifications</h3>
+            <p>Sniffs, invitations, responses and Paw Friend wins.</p>
+          </div>
+          <button className="pp-notification-close" onClick={onClose} aria-label="Close notifications">×</button>
+        </div>
+
+        <div className="pp-notification-list">
+          {notifications.length === 0 ? (
+            <div className="pp-empty">
+              <p>No new paw activity.</p>
+              <p className="pp-empty-sub">When the community moves, it will show up here.</p>
+            </div>
+          ) : (
+            notifications.map((n) => (
+              <div key={n.id} className={`pp-notification-row ${n.read ? "" : "unread"}`}>
+                <span className="pp-notification-icon">{n.icon}</span>
+                <div className="pp-notification-copy">
+                  <strong>{n.title}</strong>
+                  <p>{n.text}</p>
+                  <small>{n.when}</small>
+                  {n.cheerable && (
+                    <button
+                      className={n.cheered ? "pp-cheer sent" : "pp-cheer"}
+                      disabled={n.cheered}
+                      onClick={() => onCheer(n.id)}
+                    >
+                      {n.cheered ? "💜 Encouragement sent" : "💜 Send encouragement"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <p className="pp-notification-foot">
+          👃 “Dog sniffing” means a registered PawPrints member viewed your dog's profile. Guest views stay anonymous.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* Landing animation: a flat, chunky puppy ambles after a butterfly, leaving
    prints behind. Deliberately slow — an amble, not a run. */
 function WalkingDog() {
@@ -2359,7 +2607,13 @@ function Setup({ onPick, onBackToGate, sibling, editing = false, initialDog = nu
 
   const finish = () =>
     onPick(
-      { ...d, name: d.name.trim(), breed: d.breed.trim(), quirk: d.quirk || (editing ? "Updated profile" : "Freshly registered") },
+      {
+        ...d,
+        name: d.name.trim(),
+        breed: d.breed.trim(),
+        profileVisibility: d.profileVisibility || "everyone",
+        quirk: d.quirk || (editing ? "Updated profile" : "Freshly registered"),
+      },
       avatar
     );
 
@@ -2420,6 +2674,28 @@ function Setup({ onPick, onBackToGate, sibling, editing = false, initialDog = nu
             </div>
           </div>
         ))}
+
+        <div className="pp-profile-privacy-edit">
+          <p className="pp-grouplabel">Who can view this Paw profile?</p>
+          <div className="pp-visibility">
+            {[
+              ["everyone", "🌎", "Everyone", "Guests and PawPrints members can view the profile"],
+              ["friends", "💜", "Paw Friends", "Only connected Paw Friends can view it"],
+              ["only-me", "🔒", "Only Me", "Keep the profile private to this account"],
+            ].map(([key, icon, title, sub]) => (
+              <button
+                type="button"
+                key={key}
+                className={(d.profileVisibility || "everyone") === key ? "on" : ""}
+                onClick={() => set("profileVisibility", key)}
+              >
+                <span>{icon}</span>
+                <div><strong>{title}</strong><small>{sub}</small></div>
+                <b>{(d.profileVisibility || "everyone") === key ? "●" : "○"}</b>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <button className="pp-primary pp-next" disabled={!ready} onClick={finish}>
           Save changes
@@ -2735,6 +3011,7 @@ function ProfileScreen({ dogs, owner, avatars, onSetAvatar, stamps, onEdit, onAd
       ["Breed", d.breed], ["Age", d.age], ["Size", d.size], ["Coat", d.coat],
       ["Warm weather", d.heat], ["Energy", d.energy], ["Around water", d.water],
       ["Mobility", d.joints], ["Other dogs", d.social],
+      ["Profile visibility", d.profileVisibility === "friends" ? "Paw Friends" : d.profileVisibility === "only-me" ? "Only Me" : "Everyone"],
     ].filter(([, v]) => v);
 
   return (
@@ -3412,6 +3689,31 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-sheet-actions>button{background:none;border:0;text-align:left;padding:13px 4px;font:600 14.5px 'Nunito';color:var(--ink);cursor:pointer;border-radius:10px}
 .pp-sheet-actions>button:hover{background:var(--sage)}
 .pp-sheet-logout{color:#8A4A4A !important;font-weight:700 !important}
+.pp-head-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.pp-notify-btn{position:relative;width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;border-radius:50%;cursor:pointer;font-size:17px;flex:none}
+.pp-notify-btn b{position:absolute;right:-2px;top:-4px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border-radius:999px;background:var(--violet);color:#fff;font:800 9px 'Nunito';box-shadow:0 0 0 2px #fff}
+.pp-notification-sheet{padding-bottom:20px}
+.pp-notification-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.pp-notification-head h3{margin:0;font-size:20px;color:var(--violet)}
+.pp-notification-head p{margin:3px 0 0;font-size:11.5px;color:var(--dim)}
+.pp-notification-close{border:0;background:none;font-size:25px;line-height:1;color:var(--dim);cursor:pointer}
+.pp-notification-list{display:flex;flex-direction:column}
+.pp-notification-row{display:flex;gap:11px;padding:13px 2px;border-bottom:1px solid var(--line);position:relative}
+.pp-notification-row.unread::before{content:"";position:absolute;left:-8px;top:22px;width:6px;height:6px;border-radius:50%;background:var(--violet)}
+.pp-notification-icon{width:36px;height:36px;display:grid;place-items:center;flex:none;background:var(--violet-soft);border-radius:50%;font-size:17px}
+.pp-notification-copy{flex:1;min-width:0}
+.pp-notification-copy strong{font-size:13.5px}
+.pp-notification-copy p{font-size:12.5px;line-height:1.35;margin:2px 0;color:var(--ink)}
+.pp-notification-copy small{font-size:10px;color:var(--dim)}
+.pp-cheer{display:block;margin-top:7px;border:1px solid #D1BFF0;background:#fff;color:var(--violet);border-radius:999px;padding:6px 9px;font:800 10.5px 'Nunito';cursor:pointer}
+.pp-cheer.sent{background:var(--violet-soft);opacity:.75;cursor:default}
+.pp-notification-foot{font-size:10.5px!important;line-height:1.4;color:var(--dim);margin:12px 0 0!important;background:#F8F4FF;border-radius:10px;padding:9px}
+.pp-public-view-badge{display:inline-flex;margin-top:9px;border:1px solid #D8C9EF;background:#FBF9FE;color:#6D5B86;border-radius:999px;padding:6px 9px;font-size:10.5px;font-weight:800}
+.pp-private-profile{text-align:center;background:#FAF8FC;border:1px solid #E3DDEA;border-radius:18px;padding:28px 20px;margin-top:15px}
+.pp-private-profile>div{font-size:30px}.pp-private-profile h3{margin:8px 0 5px}.pp-private-profile p{font-size:12.5px;line-height:1.45;color:var(--dim);max-width:38ch;margin:auto}
+.pp-profile-privacy-edit{margin:18px 0 8px}
+.pp-post-acts button:disabled,.pp-plus-tab:disabled{opacity:.4;cursor:not-allowed}
+
 .pp-sheet-confirm{background:#FBF1F1;border-radius:14px;padding:14px;margin-top:6px}
 .pp-sheet-confirm p{font-size:13px;color:var(--dim);margin:0 0 12px;line-height:1.45}
 .pp-danger{width:100%;background:#8A4A4A;color:#fff;border:0;border-radius:12px;padding:12px;font:700 14px 'Nunito';cursor:pointer}
