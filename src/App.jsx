@@ -142,6 +142,17 @@ const COORDS = {
   "mirror-lake": [37.748, -119.556],
 };
 
+const TRAIL_REGIONS = {
+  bay: {
+    label: "Bay Area · San Francisco / Bay Point",
+    ids: ["fort-funston", "point-isabel", "lands-end"],
+  },
+  sandiego: {
+    label: "San Diego · 92126",
+    ids: ["mission-trails", "cowles", "dog-beach-ob", "penasquitos"],
+  },
+};
+
 const TIME_SLOTS = [
   { key: "Early morning", hour: 7, label: "Early morning", note: "around 7am" },
   { key: "Midday", hour: 12, label: "Midday", note: "around noon" },
@@ -150,8 +161,8 @@ const TIME_SLOTS = [
 ];
 
 /* Fetches one forecast covering every trailhead in a single request. */
-async function fetchForecast(dateISO, hour) {
-  const ids = TRAILS.map((t) => t.id);
+async function fetchForecast(dateISO, hour, trailIds = TRAILS.map((t) => t.id)) {
+  const ids = trailIds;
   const lat = ids.map((id) => COORDS[id][0]).join(",");
   const lon = ids.map((id) => COORDS[id][1]).join(",");
   const url =
@@ -192,7 +203,7 @@ function pawRisk(w, trail) {
   return { band: "Low", tone: "#2F5D3A" };
 }
 
-function fallbackTrailMatches(subject, wx) {
+function fallbackTrailMatches(subject, wx, trails = TRAILS) {
   const dogs = subject?.pack ? subject.members : [subject];
   const clamp = (n) => Math.max(0, Math.min(100, Math.round(n)));
   const one = (trail, d) => {
@@ -212,7 +223,7 @@ function fallbackTrailMatches(subject, wx) {
     return { score: clamp(score), reasons };
   };
   const out = {};
-  TRAILS.forEach((trail) => {
+  trails.forEach((trail) => {
     const scored = dogs.map((d) => ({ d, ...one(trail, d) })).sort((a,b) => a.score-b.score);
     const worst = scored[0];
     out[trail.id] = {
@@ -1240,6 +1251,9 @@ function PawPrintsInner() {
 
   const days = useRef(dayOptions()).current;
   const [plan, setPlan] = useState({ iso: days[0].iso, label: days[0].label, slot: "Early morning" });
+  const [trailRegion, setTrailRegion] = useState(null);
+  const [locatingTrails, setLocatingTrails] = useState(false);
+  const [trailLocationError, setTrailLocationError] = useState("");
   const [weather, setWeather] = useState(null);
   const [weatherFailed, setWeatherFailed] = useState(false);
 
@@ -1271,6 +1285,7 @@ function PawPrintsInner() {
             setPawPrefs(s.pawPrefs || {});
             setComments(s.comments || SEEDED_BARKS);
             setNotifications(s.notifications || notificationSeedFor(saved[0]?.name));
+            setTrailRegion(s.trailRegion || null);
           }
         }
       } catch {
@@ -1313,7 +1328,7 @@ function PawPrintsInner() {
     try {
       await appStorage.set(
         "pawpark:profile",
-        JSON.stringify({ owner, dogs, activeId, stamps, pledged, posts, bios, friends, invitations, pawPrefs, comments, notifications, ...next })
+        JSON.stringify({ owner, dogs, activeId, stamps, pledged, posts, bios, friends, invitations, pawPrefs, comments, notifications, trailRegion, ...next })
       );
     } catch {
       /* storage unavailable — session still works */
@@ -1392,7 +1407,89 @@ function PawPrintsInner() {
   };
 
   /* ---- claude: match trails to this dog ---- */
+  const selectTrailRegion = (key, label, source = "postal") => {
+    const next = { key, label: label || TRAIL_REGIONS[key]?.label, source };
+    setTrailRegion(next);
+    setTrailLocationError("");
+    setMatches(null);
+    setWeather(null);
+    setBriefs({});
+    setOpenTrail(null);
+    persist({ trailRegion: next });
+  };
+
+  const useCurrentTrailLocation = () => {
+    setLocatingTrails(true);
+    setTrailLocationError("");
+
+    const bayFallback = () => {
+      const next = {
+        key: "bay",
+        label: "Bay Area · San Francisco / Bay Point",
+        source: "demo-fallback",
+      };
+      setTrailRegion(next);
+      setMatches(null);
+      setWeather(null);
+      setBriefs({});
+      setTrailLocationError("Location permission was unavailable, so the prototype is showing Bay Area demo coverage.");
+      persist({ trailRegion: next });
+      setLocatingTrails(false);
+    };
+
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      bayFallback();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude: lat, longitude: lon } = coords;
+        if (lat >= 36.8 && lat <= 38.7 && lon >= -123.6 && lon <= -121.0) {
+          selectTrailRegion("bay", "Bay Area · near San Francisco / Bay Point", "device");
+        } else if (lat >= 32.3 && lat <= 33.4 && lon >= -118.0 && lon <= -116.4) {
+          selectTrailRegion("sandiego", "San Diego · near your location", "device");
+        } else {
+          setTrailRegion(null);
+          setMatches(null);
+          setWeather(null);
+          setBriefs({});
+          setTrailLocationError("Your current location is outside this prototype's Bay Area and San Diego trail coverage. Try a supported ZIP code.");
+        }
+        setLocatingTrails(false);
+      },
+      bayFallback,
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 600000 }
+    );
+  };
+
+  const useTrailPostalCode = (rawZip) => {
+    const zip = String(rawZip || "").trim();
+    if (/^921\d{2}$/.test(zip)) {
+      selectTrailRegion("sandiego", `${zip} · San Diego`, "postal");
+      return;
+    }
+    if (/^94\d{3}$/.test(zip)) {
+      selectTrailRegion("bay", `${zip} · Bay Area`, "postal");
+      return;
+    }
+    setTrailRegion(null);
+    setMatches(null);
+    setWeather(null);
+    setBriefs({});
+    setTrailLocationError("Prototype coverage currently supports Bay Area ZIP codes (94xxx) and San Diego ZIP codes (921xx). Try 94565 or 92126.");
+  };
+
   const runMatch = async () => {
+    const localTrails = trailRegion?.key
+      ? TRAILS.filter((t) => TRAIL_REGIONS[trailRegion.key]?.ids.includes(t.id))
+      : [];
+
+    if (!localTrails.length) {
+      setMatchError("Choose your location or enter a ZIP code first.");
+      return;
+    }
+
     setMatching(true);
     setMatchError(null);
     setWeatherFailed(false);
@@ -1400,7 +1497,7 @@ function PawPrintsInner() {
     const slot = TIME_SLOTS.find((s) => s.key === plan.slot) || TIME_SLOTS[0];
     let wx = null;
     try {
-      wx = await fetchForecast(plan.iso, slot.hour);
+      wx = await fetchForecast(plan.iso, slot.hour, localTrails.map((t) => t.id));
       setWeather(wx);
     } catch {
       setWeatherFailed(true);
@@ -1408,7 +1505,7 @@ function PawPrintsInner() {
     }
 
     try {
-      const catalog = TRAILS.map((t) => {
+      const catalog = localTrails.map((t) => {
         const w = wx?.[t.id];
         return {
           id: t.id,
@@ -1453,7 +1550,7 @@ Respond with JSON only. No preamble, no markdown fences:
       arr.forEach((m) => (map[m.id] = m));
       setMatches(map);
     } catch (e) {
-      setMatches(fallbackTrailMatches(dog, wx));
+      setMatches(fallbackTrailMatches(dog, wx, localTrails));
       setMatchError(null);
     }
     setMatching(false);
@@ -1913,6 +2010,11 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
               days={days}
               plan={plan}
               onPlan={(p) => { setPlan({ ...plan, ...p }); setMatches(null); setBriefs({}); }}
+              trailRegion={trailRegion}
+              locating={locatingTrails}
+              locationError={trailLocationError}
+              onUseLocation={useCurrentTrailLocation}
+              onUsePostalCode={useTrailPostalCode}
               weather={weather}
               weatherFailed={weatherFailed}
               matches={matches}
@@ -3301,8 +3403,9 @@ function Setup({ onPick, onBackToGate, sibling, editing = false, initialDog = nu
 
 /* -------------------------------- trail list ------------------------------- */
 
-function TrailList({ dog, dogs, activeId, onSwitch, days, plan, onPlan, weather, weatherFailed, matches, matching, error, stamps, onMatch, onOpen }) {
+function TrailList({ dog, dogs, activeId, onSwitch, days, plan, onPlan, trailRegion, locating, locationError, onUseLocation, onUsePostalCode, weather, weatherFailed, matches, matching, error, stamps, onMatch, onOpen }) {
   const adventureDogs = (dogs || []).filter((d) => !d.memorial);
+  const [zipDraft, setZipDraft] = useState("");
 
   if (dog?.memorial) {
     return (
@@ -3328,9 +3431,12 @@ function TrailList({ dog, dogs, activeId, onSwitch, days, plan, onPlan, weather,
     );
   }
 
+  const nearbyTrails = trailRegion?.key
+    ? TRAILS.filter((t) => TRAIL_REGIONS[trailRegion.key]?.ids.includes(t.id))
+    : [];
   const list = matches
-    ? [...TRAILS].sort((a, b) => (matches[b.id]?.score || 0) - (matches[a.id]?.score || 0))
-    : TRAILS;
+    ? [...nearbyTrails].sort((a, b) => (matches[b.id]?.score || 0) - (matches[a.id]?.score || 0))
+    : nearbyTrails;
 
   return (
     <>
@@ -3356,6 +3462,54 @@ function TrailList({ dog, dogs, activeId, onSwitch, days, plan, onPlan, weather,
           </div>
         </section>
       )}
+
+      <section className="pp-location-card">
+        <div className="pp-location-copy">
+          <span className="pp-kicker">Start nearby</span>
+          <h2>Where are you exploring?</h2>
+          <p>PawPark finds nearby demo trails first, then checks which ones fit your dog and today's weather.</p>
+        </div>
+
+        <button className="pp-location-current" onClick={onUseLocation} disabled={locating}>
+          <span>📍</span>
+          <div>
+            <strong>{locating ? "Finding your location…" : "Use my current location"}</strong>
+            <small>For the demo, Bay Area locations include San Francisco / Bay Point.</small>
+          </div>
+        </button>
+
+        <div className="pp-location-or"><span>or enter a ZIP code</span></div>
+
+        <form
+          className="pp-zip-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onUsePostalCode(zipDraft);
+          }}
+        >
+          <input
+            inputMode="numeric"
+            maxLength={5}
+            value={zipDraft}
+            onChange={(e) => setZipDraft(e.target.value.replace(/\D/g, "").slice(0, 5))}
+            placeholder="e.g. 92126"
+            aria-label="ZIP code"
+          />
+          <button type="submit" disabled={zipDraft.length !== 5}>Find trails</button>
+        </form>
+
+        {trailRegion && (
+          <div className="pp-location-selected">
+            <span>✓</span>
+            <div>
+              <strong>{trailRegion.label}</strong>
+              <small>{nearbyTrails.length} nearby demo trail{nearbyTrails.length === 1 ? "" : "s"} available</small>
+            </div>
+          </div>
+        )}
+
+        {locationError && <p className="pp-location-error">{locationError}</p>}
+      </section>
 
       <section className="pp-planner">
         <h2 className="pp-plan-title">When are you two heading out?</h2>
@@ -3386,8 +3540,14 @@ function TrailList({ dog, dogs, activeId, onSwitch, days, plan, onPlan, weather,
           ))}
         </div>
 
-        <button className="pp-primary pp-next" onClick={onMatch} disabled={matching}>
-          {matching ? "Checking the forecast…" : dog.guest ? "Find trails for this outing" : `Find trails for ${dog.name}`}
+        <button className="pp-primary pp-next" onClick={onMatch} disabled={matching || !trailRegion}>
+          {matching
+            ? "Checking the forecast…"
+            : !trailRegion
+              ? "Choose a location first"
+              : dog.guest
+                ? "Find nearby trails for this outing"
+                : `Find nearby trails for ${dog.name}`}
         </button>
 
         {weatherFailed && (
@@ -3398,13 +3558,20 @@ function TrailList({ dog, dogs, activeId, onSwitch, days, plan, onPlan, weather,
         {error && <p className="pp-error">{error} <button onClick={onMatch}>Retry</button></p>}
       </section>
 
-      {matching && <Spinner label={`Pulling ${plan.label.toLowerCase()}'s forecast for eight trailheads`} />}
+      {matching && <Spinner label={`Pulling ${plan.label.toLowerCase()}'s forecast for ${nearbyTrails.length} nearby trailheads`} />}
 
       {matches && (
         <p className="pp-matchnote">
-          {dog.guest ? "Ranked for an average adult dog" : `Ranked for ${dog.name}`}, {plan.label.toLowerCase()} {TIME_SLOTS.find((s) => s.key === plan.slot)?.note}.
+          {dog.guest ? "Ranked for an average adult dog" : `Ranked for ${dog.name}`} near {trailRegion?.label}, {plan.label.toLowerCase()} {TIME_SLOTS.find((s) => s.key === plan.slot)?.note}.
           {dog.guest && <em className="pp-inline-cta"> Add your dog to change this.</em>}
         </p>
+      )}
+
+      {!trailRegion && (
+        <div className="pp-location-empty">
+          <span>📍</span>
+          <p>Choose your location to see nearby trail suggestions.</p>
+        </div>
       )}
 
       <ul className="pp-trails">
@@ -3955,6 +4122,21 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-next{margin-top:8px}
 /* planner + weather */
 .pp-planner{background:var(--sage);border-radius:18px;padding:16px;margin-bottom:16px}
+.pp-location-card{background:linear-gradient(145deg,#fff,#F4F7F0);border:1px solid #D7E2D4;border-radius:20px;padding:18px;margin-bottom:14px}
+.pp-location-copy h2{font-family:'Bricolage Grotesque';font-size:21px;margin:3px 0 5px;color:var(--moss-deep)}
+.pp-location-copy p{font-size:12px;line-height:1.5;color:var(--dim);margin:0 0 14px}
+.pp-location-current{width:100%;display:flex;align-items:center;gap:11px;text-align:left;background:#fff;border:1.5px solid #BFD0BA;border-radius:15px;padding:12px 13px;cursor:pointer;color:var(--ink)}
+.pp-location-current>span{font-size:22px}.pp-location-current>div{display:flex;flex-direction:column}.pp-location-current strong{font-size:13px}.pp-location-current small{font-size:10.5px;color:var(--dim);margin-top:2px}
+.pp-location-current:disabled{opacity:.65;cursor:wait}
+.pp-location-or{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin:12px 0}
+.pp-location-or:before,.pp-location-or:after{content:"";height:1px;background:var(--line);flex:1}
+.pp-zip-form{display:flex;gap:8px}.pp-zip-form input{min-width:0;flex:1;border:1.5px solid #C9D6C4;border-radius:12px;padding:11px 12px;font:700 13px 'Nunito';outline:none;background:#fff}.pp-zip-form input:focus{border-color:var(--moss)}
+.pp-zip-form button{border:0;border-radius:12px;background:var(--moss);color:#fff;padding:0 15px;font:800 12px 'Nunito';cursor:pointer}.pp-zip-form button:disabled{opacity:.4;cursor:not-allowed}
+.pp-location-selected{display:flex;align-items:center;gap:9px;background:#EAF3E7;border-radius:13px;padding:10px 11px;margin-top:12px;color:var(--moss-deep)}
+.pp-location-selected>span{width:24px;height:24px;border-radius:50%;background:var(--moss);color:#fff;display:grid;place-items:center;font-weight:900}.pp-location-selected>div{display:flex;flex-direction:column}.pp-location-selected strong{font-size:12px}.pp-location-selected small{font-size:10px;color:#58705D;margin-top:1px}
+.pp-location-error{font-size:10.5px;line-height:1.4;color:#8A4A4A;background:#FFF4F2;border-radius:10px;padding:8px 10px;margin:10px 0 0}
+.pp-location-empty{text-align:center;padding:22px 14px;color:var(--dim)}.pp-location-empty span{font-size:24px}.pp-location-empty p{font-size:12px;margin:5px 0 0}
+
 .pp-plan-title{font-size:19px;margin-bottom:14px}
 .pp-planner .pp-grouplabel{margin-top:14px}
 .pp-planner .pp-chips .pp-chip{background:#fff}
