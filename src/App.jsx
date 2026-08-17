@@ -273,6 +273,48 @@ const DEMO_DOGS = [
     water: "Avoids water", joints: "Stiff hips, short outings", social: "Needs space from other dogs",
     quirk: "Pace of a museum docent",
   },
+  {
+    name: "Luna", breed: "Australian Shepherd", age: "1–3 years", size: "Medium (25–55 lb)",
+    coat: "Thick double coat", heat: "Wilts in the heat", energy: "High energy",
+    water: "Swims given any chance", joints: "No issues", social: "Off-leash reliable",
+    quirk: "Has never met a trail she didn't want to herd",
+  },
+  {
+    name: "Max", breed: "Beagle", age: "4–7 years", size: "Medium (25–55 lb)",
+    coat: "Short, single coat", heat: "Average", energy: "High energy",
+    water: "Avoids water", joints: "No issues", social: "Friendly, stays leashed",
+    quirk: "Nose first, itinerary second",
+  },
+  {
+    name: "Daisy", breed: "French Bulldog", age: "1–3 years", size: "Small (under 25 lb)",
+    coat: "Short, single coat", heat: "Wilts in the heat", energy: "Medium energy",
+    water: "Avoids water", joints: "No issues", social: "Friendly, stays leashed",
+    quirk: "Professional shade inspector",
+  },
+  {
+    name: "Archie", breed: "German Shepherd", age: "4–7 years", size: "Large (55–90 lb)",
+    coat: "Dense double coat", heat: "Average", energy: "High energy",
+    water: "Wades, won't swim", joints: "No issues", social: "Off-leash reliable",
+    quirk: "Takes trail patrol very seriously",
+  },
+  {
+    name: "Nala", breed: "Shih Tzu", age: "8+ years", size: "Small (under 25 lb)",
+    coat: "Long and heavy", heat: "Wilts in the heat", energy: "Low energy",
+    water: "Avoids water", joints: "Stiff hips, short outings", social: "Friendly, stays leashed",
+    quirk: "Prefers scenic benches to summit attempts",
+  },
+  {
+    name: "Theo", breed: "Border Collie", age: "1–3 years", size: "Medium (25–55 lb)",
+    coat: "Thick double coat", heat: "Average", energy: "High energy",
+    water: "Swims given any chance", joints: "No issues", social: "Off-leash reliable",
+    quirk: "Would like to organize everyone into a neat line",
+  },
+  {
+    name: "Rosie", breed: "Cocker Spaniel", age: "8+ years", size: "Medium (25–55 lb)",
+    coat: "Long and heavy", heat: "Average", energy: "Medium energy",
+    water: "Wades, won't swim", joints: "Stiff hips, short outings", social: "Friendly, stays leashed",
+    quirk: "Will negotiate indefinitely for one more tug",
+  },
 ];
 
 const STEPS = [
@@ -389,6 +431,13 @@ const REGISTRY = {
   "COO-2X9F": { ...DEMO_DOGS[2], id: "COO-2X9F", registeredBy: "S. Patel" },
   "JUN-6P1W": { ...DEMO_DOGS[3], id: "JUN-6P1W", registeredBy: "R. Okafor" },
   "BEL-4KQ2": { ...DEMO_DOGS[0], id: "BEL-4KQ2", registeredBy: "T. Nguyen" },
+  "LUN-5A7M": { ...DEMO_DOGS[4], id: "LUN-5A7M", registeredBy: "J. Kim" },
+  "MAX-3B8N": { ...DEMO_DOGS[5], id: "MAX-3B8N", registeredBy: "D. Flores" },
+  "DAI-7C2P": { ...DEMO_DOGS[6], id: "DAI-7C2P", registeredBy: "A. Brooks" },
+  "ARC-9D4R": { ...DEMO_DOGS[7], id: "ARC-9D4R", registeredBy: "P. Singh" },
+  "NAL-2E6T": { ...DEMO_DOGS[8], id: "NAL-2E6T", registeredBy: "C. Lee" },
+  "THE-8F1V": { ...DEMO_DOGS[9], id: "THE-8F1V", registeredBy: "M. Carter" },
+  "ROS-4G9Y": { ...DEMO_DOGS[10], id: "ROS-4G9Y", registeredBy: "E. Morgan" },
 };
 
 /* Badges are computed from what actually happened, never awarded for signing up. */
@@ -464,6 +513,13 @@ const BREED_ART = {
   Labrador: { coat: "#5E483A", shade: "#4A382C", muzzle: "#8A7060", ears: "floppy", bg: "#EDE5DE", scarf: "#2F5D3A" },
   Corgi: { coat: "#D98B4A", shade: "#C0763A", muzzle: "#FBF3E8", ears: "erect", bg: "#F8EADB", scarf: "#B4622C" },
   "Poodle Mix": { coat: "#9C9AA5", shade: "#84828E", muzzle: "#C9C7D0", ears: "curly", bg: "#EDECF1", scarf: "#2F6F86" },
+  "Australian Shepherd": { coat: "#8A6A55", shade: "#5F493C", muzzle: "#F2E8DE", ears: "floppy", bg: "#EEE7F6", scarf: "#6D3DD1" },
+  Beagle: { coat: "#B97942", shade: "#704A35", muzzle: "#F4E8D8", ears: "floppy", bg: "#F6EBDD", scarf: "#2F5D3A" },
+  "French Bulldog": { coat: "#B9A58B", shade: "#8B7660", muzzle: "#E9DED0", ears: "erect", bg: "#F1E9E2", scarf: "#9A5CC8" },
+  "German Shepherd": { coat: "#A8773F", shade: "#4B3C30", muzzle: "#CFA77A", ears: "erect", bg: "#EEE6DA", scarf: "#2F5D3A" },
+  "Shih Tzu": { coat: "#D6C4AC", shade: "#A99075", muzzle: "#F3E9DD", ears: "floppy", bg: "#F7EFF2", scarf: "#B4622C" },
+  "Border Collie": { coat: "#3E4146", shade: "#25272B", muzzle: "#F5F3EF", ears: "erect", bg: "#E9EEF2", scarf: "#6D3DD1" },
+  "Cocker Spaniel": { coat: "#C99B67", shade: "#A7794E", muzzle: "#E9D4B7", ears: "floppy", bg: "#F4E8DA", scarf: "#9A5CC8" },
 };
 
 function DogArt({ breed, size = 44 }) {
@@ -671,6 +727,85 @@ const BUDDY_DATA = {
       { id: "b-juniper-1", caption: "Slow lap at eight years old, and she still insisted on leading the whole way back.", trail: "Visitor Center Loop", miles: 1.5, paws: 41, barks: 7, when: "6h ago" },
     ],
   },
+  Luna: {
+    friends: ["Bella", "Theo"],
+    pledged: true,
+    profileVisibility: "friends",
+    bio: "Two years old, endless trail energy, and happiest when there is water somewhere in the plan.",
+    trails: [["fort-funston", "AUG 12"], ["lands-end", "AUG 15"]],
+    posts: [
+      { id: "b-luna-1", caption: "Luna tried to herd the fog at Fort Funston. The fog remained uncooperative.", trail: "Fort Funston Beach Loop", miles: 1.7, paws: 36, barks: 4, when: "4h ago" },
+    ],
+  },
+  Max: {
+    friends: ["Milo", "Daisy"],
+    pledged: false,
+    profileVisibility: "everyone",
+    bio: "Five-year-old Beagle. Walks are technically sniff expeditions with occasional forward motion.",
+    trails: [["point-isabel", "AUG 10"]],
+    posts: [
+      { id: "b-max-1", caption: "We covered two miles. Max's nose covered approximately forty-seven.", trail: "Point Isabel Shoreline", miles: 2.1, paws: 29, barks: 5, when: "8h ago" },
+    ],
+  },
+  Daisy: {
+    friends: ["Max", "Nala"],
+    pledged: false,
+    profileVisibility: "friends",
+    bio: "Small dog, big opinions about sunshine. Short walks, cool mornings, excellent company.",
+    trails: [["dog-beach-ob", "AUG 7"]],
+    posts: [
+      { id: "b-daisy-1", caption: "Beach visit completed before the sun got ideas. Daisy approved the breeze.", trail: "Dog Beach, Ocean Beach", miles: 0.9, paws: 22, barks: 2, when: "Yesterday" },
+    ],
+  },
+  Archie: {
+    friends: ["Cooper", "Theo"],
+    pledged: true,
+    profileVisibility: "everyone",
+    bio: "Steady, curious, and happiest with a job. His chosen job is apparently checking every trail junction.",
+    trails: [["penasquitos", "AUG 14"]],
+    posts: [
+      { id: "b-archie-1", caption: "Archie inspected every fork in the canyon and declared the route acceptable.", trail: "Los Peñasquitos Canyon", miles: 6.8, paws: 44, barks: 6, when: "1d ago" },
+    ],
+  },
+  Nala: {
+    friends: ["Daisy"],
+    pledged: false,
+    profileVisibility: "friends",
+    bio: "Nine years old and firmly in her scenic-stroll era. Shade, snacks, and no rushing.",
+    trails: [["mission-trails", "AUG 5"]],
+    posts: [
+      { id: "b-nala-1", caption: "Nala found the best shady bench before I found the trail map. Priorities.", trail: "Visitor Center Loop", miles: 1.5, paws: 27, barks: 3, when: "2d ago" },
+    ],
+  },
+  Theo: {
+    friends: ["Luna", "Archie"],
+    pledged: true,
+    profileVisibility: "everyone",
+    bio: "Young Border Collie with more ideas than hours in the day. Water and long walks are both welcome.",
+    trails: [["lands-end", "AUG 13"], ["fort-funston", "AUG 16"]],
+    posts: [
+      { id: "b-theo-1", caption: "Theo spent the whole walk making sure the humans stayed in formation.", trail: "Lands End Coastal Trail", miles: 3.4, paws: 38, barks: 4, when: "3h ago" },
+    ],
+  },
+  Rosie: {
+    friends: ["Bella", "Max"],
+    pledged: true,
+    profileVisibility: "everyone",
+    bio: "Senior Cocker Spaniel, professional toy negotiator, and a believer in slow park days with excellent sniff breaks.",
+    trails: [["point-isabel", "AUG 15"]],
+    posts: [
+      {
+        id: "b-rosie-video",
+        media: "video",
+        videoSrc: "/pawprints-dog-demo.mp4",
+        featured: true,
+        caption: "Rosie has decided the tug toy is non-negotiable. A very serious park meeting is now underway. 🐾",
+        paws: 47,
+        barks: 6,
+        when: "1h ago",
+      },
+    ],
+  },
 };
 
 
@@ -721,6 +856,45 @@ const SEEDED_INVITATIONS = [
     audience: "Paw Friends",
     sniffs: [],
   },
+  {
+    id: "invite-luna-adventure",
+    type: "adventure",
+    dog: "Luna",
+    breed: "Australian Shepherd",
+    when: "Saturday · 7:30 AM",
+    date: "2026-08-22",
+    time: "07:30",
+    location: "Fort Funston",
+    note: "Cool-morning beach loop with plenty of sniff and water breaks. Happy energetic dogs welcome.",
+    audience: "Everyone",
+    sniffs: ["Theo"],
+  },
+  {
+    id: "invite-max-play",
+    type: "play",
+    dog: "Max",
+    breed: "Beagle",
+    when: "Sunday · 4:30 PM",
+    date: "2026-08-23",
+    time: "16:30",
+    location: "Point Isabel",
+    note: "Casual sniff-heavy walk. No speed expectations whatsoever.",
+    audience: "Everyone",
+    sniffs: [],
+  },
+  {
+    id: "invite-daisy-sleepover",
+    type: "sleepover",
+    dog: "Daisy",
+    breed: "French Bulldog",
+    when: "Next Friday evening",
+    date: "2026-08-28",
+    time: "18:00",
+    location: "Paw Friends only",
+    note: "Looking for one calm familiar friend for a short evening stay.",
+    audience: "Paw Friends",
+    sniffs: [],
+  },
 ];
 
 const SEEDED_PREFS = {
@@ -728,6 +902,13 @@ const SEEDED_PREFS = {
   Cooper: { play: true, adventure: true, sleepover: false, host: true },
   Milo: { play: true, adventure: false, sleepover: false, host: false },
   Juniper: { play: false, adventure: true, sleepover: true, host: true },
+  Luna: { play: true, adventure: true, sleepover: false, host: false },
+  Max: { play: true, adventure: true, sleepover: false, host: false },
+  Daisy: { play: true, adventure: false, sleepover: true, host: false },
+  Archie: { play: true, adventure: true, sleepover: false, host: true },
+  Nala: { play: false, adventure: true, sleepover: true, host: false },
+  Theo: { play: true, adventure: true, sleepover: false, host: false },
+  Rosie: { play: true, adventure: false, sleepover: true, host: false },
 };
 
 const SEEDED_BARKS = {
@@ -1647,6 +1828,7 @@ Two sentences maximum. Warm, specific, no hashtags, no emoji spam (one emoji at 
               onSniff={toggleSniff}
               onCreate={(type) => setInviteComposer({ type })}
               onRespond={respondToInterest}
+              onOpenProfile={openDiscoveredProfile}
               onJoin={() => { setMode("member"); setDogs([]); setActiveId(null); setComposing({ mode: "account" }); }}
             />
           ) : view === "pawprints" ? (
@@ -1977,7 +2159,7 @@ function DogProfile({ subject, avatarSrc, avatarBreed, onSetAvatar, onOpenHouseh
             <div className="pp-grid">
               {visiblePosts.filter((p) => photos?.[p.id] || p.media === "scene").map((p) => (
                 <div key={p.id} className="pp-tile photo">
-                  {photos?.[p.id] ? (p.media === "video" ? <video src={photos[p.id]} muted playsInline className="pp-tile-media" /> : <img src={photos[p.id]} alt="" className="pp-tile-media" />) : <SceneArt seed={p.id} />}
+                  {photos?.[p.id] ? (p.media === "video" ? <video src={photos[p.id]} controls muted playsInline preload="metadata" className="pp-tile-media" /> : <img src={photos[p.id]} alt="" className="pp-tile-media" />) : <SceneArt seed={p.id} />}
                   {p.trail && <strong className="pp-tile-cap">{p.trail}</strong>}
                   {p.mine && p.visibility && <span className="pp-privacy-dot">{p.visibility === "only-me" ? "🔒" : p.visibility === "friends" ? "💜" : "🌎"}</span>}
                 </div>
@@ -2050,9 +2232,17 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
   const breedOf = (name) => DEMO_DOGS.find((d) => d.name === name)?.breed;
   const buddyGridPosts = (name) => [
     ...(BUDDY_PHOTOS[name] ? [{ id: `${name}-portrait`, dog: name, media: "image", paws: 0, barks: 0 }] : []),
+    ...(BUDDY_DATA[name]?.posts || [])
+      .filter((p) => p.media === "video" || p.media === "image")
+      .map((p) => ({ ...p, dog: name })),
     ...(BUDDY_DATA[name]?.trails || []).map(([tid]) => ({ id: `${name}-scene-${tid}`, dog: name, media: "scene", paws: 0, barks: 0, trail: TRAILS.find((t) => t.id === tid)?.name })),
   ];
   const publicBuddyNames = DEMO_DOGS.filter((d) => profileVisibilityOf(d.name) === "everyone").map((d) => d.name);
+  const publicFeaturedPosts = DEMO_DOGS
+    .filter((d) => profileVisibilityOf(d.name) === "everyone")
+    .flatMap((d) => buddyPosts(d.name))
+    .filter((p) => p.featured);
+
   const feed = dog.guest
     ? [
         ...posts.filter((p) => p.visibility === "everyone"),
@@ -2061,12 +2251,18 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
     : [
         ...posts.filter((p) => p.visibility !== "only-me"),
         ...viewerFriends.flatMap((f) => buddyPosts(f)),
+        ...publicFeaturedPosts.filter((p) => !viewerFriends.includes(p.dog)),
       ];
   const seededMedia = {};
   Object.entries(BUDDY_PHOTOS).forEach(([name, url]) => {
     seededMedia[`${name}-portrait`] = url;
     const first = BUDDY_DATA[name]?.posts?.[0];
-    if (first) seededMedia[first.id] = url;
+    if (first && first.media !== "video") seededMedia[first.id] = url;
+  });
+  Object.values(BUDDY_DATA).forEach((profile) => {
+    (profile.posts || []).forEach((p) => {
+      if (p.videoSrc) seededMedia[p.id] = p.videoSrc;
+    });
   });
   const allPhotos = { ...seededMedia, ...photos };
 
@@ -2218,6 +2414,7 @@ function PawPrints({ dog, houseDogs, onSwitchDog, onOpenHousehold, onAddSibling,
                   <div><strong>{p.dog}</strong><span>{p.breed} · {p.when}</span></div>
                 </button>
                 {p.mine && <span className="pp-mine-tag">{p.visibility === "only-me" ? "🔒 Only me" : p.visibility === "everyone" ? "🌎 Everyone" : "💜 Paw Friends"}</span>}
+                {!p.mine && p.featured && <span className="pp-featured-tag">✨ Community spotlight</span>}
               </div>
               {allPhotos?.[p.id] ? (p.media === "video" ? <video src={allPhotos[p.id]} controls playsInline className="pp-post-media"/> : <img src={allPhotos[p.id]} alt="" className="pp-post-media"/>) : !p.mine ? <div className="pp-post-media pp-scenewrap"><SceneArt seed={p.id}/></div> : null}
               <p className="pp-post-body">{p.caption}</p>
@@ -3456,7 +3653,7 @@ function InvitationComposer({ dog, initialType, onCreate, onClose }) {
   </div></div>;
 }
 
-function PawTogether({ dog, invitations, avatars, onSniff, onCreate, onRespond, onJoin }) {
+function PawTogether({ dog, invitations, avatars, onSniff, onCreate, onRespond, onOpenProfile, onJoin }) {
   const [tab, setTab] = useState("community");
   if (dog.guest) return <GuestPanel kind="profile" onJoin={onJoin}/>;
   if (dog.memorial) {
@@ -3479,9 +3676,18 @@ function PawTogether({ dog, invitations, avatars, onSniff, onCreate, onRespond, 
     <div className="pp-invite-list">
       {!cards.length && <div className="pp-empty"><p>No invitations yet.</p><p className="pp-empty-sub">Post one when {dog.name} wants company, an adventure or a trusted sleepover.</p></div>}
       {cards.map((inv)=>{ const meta=PAW_TOGETHER_TYPES[inv.type]; const sniffed=(inv.sniffs||[]).includes(dog.name); return <article key={inv.id} className="pp-invite-card">
-        <div className="pp-invite-head"><Avatar name={inv.dog} size={44} src={avatars?.[inv.dog]} breed={inv.breed}/><div><span className="pp-invite-kind">{meta.icon} {meta.title}</span><strong>{inv.dog}</strong><small>{inv.breed}</small></div></div>
+        <div className="pp-invite-head">
+          <button className="pp-invite-profile" onClick={() => !inv.mine && onOpenProfile?.(inv.dog)} disabled={!!inv.mine} aria-label={inv.mine ? `${inv.dog}'s invitation` : `Open ${inv.dog}'s profile`}>
+            <Avatar name={inv.dog} size={44} src={avatars?.[inv.dog] || BUDDY_PHOTOS[inv.dog]} breed={inv.breed}/>
+            <div>
+              <span className="pp-invite-kind">{meta.icon} {meta.title}</span>
+              <strong>{inv.dog}{!inv.mine && <em> · View profile</em>}</strong>
+              <small>{inv.breed}</small>
+            </div>
+          </button>
+        </div>
         <h3>{inv.location}</h3><p className="pp-invite-when">📅 {inv.when}</p><p>{inv.note}</p><div className="pp-invite-foot"><span>👥 {inv.audience}</span>{!inv.mine && <button className={sniffed?"pp-sniff on":"pp-sniff"} onClick={()=>onSniff(inv.id)}>👃 {sniffed ? "Sniffed" : "Sniff / I'm interested"}</button>}</div>
-        {inv.mine && (inv.interest||[]).map((x)=><div key={x.dog} className="pp-interest"><div><strong>👃 {x.dog} sniffed this</strong><p>{x.text}</p>{x.demo && <small>Demo Paw Friend response</small>}</div>{x.status==="pending" ? <div className="pp-interest-actions"><button onClick={()=>onRespond(inv.id,x.dog,"accepted")}>Wag back</button><button onClick={()=>onRespond(inv.id,x.dog,"declined")}>Decline</button></div> : <span className={`pp-status ${x.status}`}>{x.status}</span>}</div>)}
+        {inv.mine && (inv.interest||[]).map((x)=><div key={x.dog} className="pp-interest"><div><button className="pp-interest-profile" onClick={() => onOpenProfile?.(x.dog)}><strong>👃 {x.dog} sniffed this · View profile</strong></button><p>{x.text}</p>{x.demo && <small>Demo Paw Friend response</small>}</div>{x.status==="pending" ? <div className="pp-interest-actions"><button onClick={()=>onRespond(inv.id,x.dog,"accepted")}>Wag back</button><button onClick={()=>onRespond(inv.id,x.dog,"declined")}>Decline</button></div> : <span className={`pp-status ${x.status}`}>{x.status}</span>}</div>)}
       </article>;})}
     </div>
   </div>;
@@ -3876,6 +4082,9 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-post-author{display:flex;align-items:center;gap:10px;min-width:0;border:0;background:none;padding:0;text-align:left;cursor:pointer}
 .pp-post-author>div{display:flex;flex-direction:column}
 .pp-post-author strong{text-decoration:none}.pp-post-author:hover strong{text-decoration:underline}
+.pp-featured-tag{margin-left:auto;align-self:flex-start;background:#F6F0FF;color:var(--violet);border:1px solid #DCCDF4;border-radius:999px;padding:4px 7px;font-size:9.5px;font-weight:800;white-space:nowrap}
+.pp-tile video.pp-tile-media{background:#17151A}
+
 
 .pp-private-profile{text-align:center;background:#FAF8FC;border:1px solid #E3DDEA;border-radius:18px;padding:28px 20px;margin-top:15px}
 .pp-private-profile>div{font-size:30px}.pp-private-profile h3{margin:8px 0 5px}.pp-private-profile p{font-size:12.5px;line-height:1.45;color:var(--dim);max-width:38ch;margin:auto}
@@ -4105,7 +4314,12 @@ button:focus-visible{outline:2.5px solid var(--violet);outline-offset:2px}
 .pp-bark-modal{text-align:left}.pp-bark-list{max-height:330px;overflow:auto;margin:8px 0 14px}.pp-bark-row{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.pp-bark-row strong{font-size:13px}.pp-bark-row p{margin:2px 0;font-size:13.5px;line-height:1.35}.pp-bark-row span{font-size:10px;color:var(--dim)}.pp-bark-compose{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:12px}.pp-bark-compose input{flex:1;border:1px solid var(--line);border-radius:999px;padding:10px 12px;font:400 13px 'Nunito'}.pp-bark-compose button{border:0;background:var(--violet);color:#fff;width:36px;height:36px;border-radius:50%;font-size:15px}.pp-bark-compose button:disabled{opacity:.35}
 
 /* Paw Together */
-.pp-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}.pp-action-grid button{background:#fff;border:1px solid #E2D8F4;border-radius:17px;padding:14px;text-align:left;min-height:126px}.pp-action-grid span{font-size:26px}.pp-action-grid strong{display:block;font-size:14px;margin:7px 0 3px}.pp-action-grid small{display:block;font-size:11.5px;line-height:1.3;color:var(--dim)}.pp-sniff-explain{background:var(--violet-soft);color:#5730AD;border-radius:14px;padding:11px 12px;font-size:12.5px;margin-bottom:15px}.pp-invite-list{display:flex;flex-direction:column;gap:12px;margin-top:14px}.pp-invite-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px}.pp-invite-head{display:flex;gap:10px;align-items:center}.pp-invite-head>div{display:flex;flex-direction:column}.pp-invite-head strong{font-size:14px}.pp-invite-head small{font-size:11px;color:var(--dim)}.pp-invite-kind{font-size:10px;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;font-weight:800}.pp-invite-card h3{font-size:17px;margin:13px 0 3px}.pp-invite-card>p{font-size:13.5px;line-height:1.42}.pp-invite-when{font-size:12px!important;color:var(--dim)}.pp-invite-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}.pp-invite-foot>span{font-size:11px;color:var(--dim)}.pp-sniff{border:1px solid #CCB9EF;background:#fff;color:var(--violet);border-radius:999px;padding:8px 10px;font:700 11.5px 'Nunito'}.pp-sniff.on{background:var(--violet);color:#fff}.pp-interest{margin-top:12px;border-radius:13px;background:#FAF7FF;border:1px solid #E7DCF7;padding:10px;display:flex;gap:10px;align-items:center;justify-content:space-between}.pp-interest p{font-size:11.5px;margin:3px 0;color:var(--dim)}.pp-interest small{font-size:9.5px;color:#9A86BA}.pp-interest-actions{display:flex;gap:5px}.pp-interest-actions button{border:1px solid #CDBCEC;background:#fff;color:var(--violet);border-radius:999px;padding:5px 8px;font:700 10px 'Nunito'}.pp-status{font-size:10px;text-transform:capitalize;font-weight:800;padding:5px 8px;border-radius:999px}.pp-status.accepted{background:#E7F2E8;color:var(--moss)}.pp-status.accepted::after{content:" 🐕"}.pp-status.declined{background:#F4E9E9;color:#8A4A4A}.pp-invite-types{margin-bottom:14px}.pp-chip.purple.on{background:var(--violet);border-color:var(--violet)}.pp-safety-note{background:#F3F0F8;border-radius:11px;padding:10px;font-size:11.5px;color:var(--dim);text-align:left}
+.pp-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}.pp-action-grid button{background:#fff;border:1px solid #E2D8F4;border-radius:17px;padding:14px;text-align:left;min-height:126px}.pp-action-grid span{font-size:26px}.pp-action-grid strong{display:block;font-size:14px;margin:7px 0 3px}.pp-action-grid small{display:block;font-size:11.5px;line-height:1.3;color:var(--dim)}.pp-sniff-explain{background:var(--violet-soft);color:#5730AD;border-radius:14px;padding:11px 12px;font-size:12.5px;margin-bottom:15px}.pp-invite-list{display:flex;flex-direction:column;gap:12px;margin-top:14px}.pp-invite-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px}.pp-invite-head{display:flex;gap:10px;align-items:center}
+.pp-invite-profile{display:flex;align-items:center;gap:10px;flex:1;border:0;background:none;padding:0;text-align:left;cursor:pointer}
+.pp-invite-profile:disabled{cursor:default}
+.pp-invite-profile>div{display:flex;flex-direction:column}
+.pp-invite-head strong{font-size:14px}.pp-invite-head strong em{font-style:normal;font-size:10.5px;color:var(--violet);font-weight:800}.pp-invite-head small{font-size:11px;color:var(--dim)}
+.pp-interest-profile{border:0;background:none;padding:0;text-align:left;color:inherit;cursor:pointer}.pp-interest-profile:hover strong{text-decoration:underline}.pp-invite-kind{font-size:10px;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;font-weight:800}.pp-invite-card h3{font-size:17px;margin:13px 0 3px}.pp-invite-card>p{font-size:13.5px;line-height:1.42}.pp-invite-when{font-size:12px!important;color:var(--dim)}.pp-invite-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px}.pp-invite-foot>span{font-size:11px;color:var(--dim)}.pp-sniff{border:1px solid #CCB9EF;background:#fff;color:var(--violet);border-radius:999px;padding:8px 10px;font:700 11.5px 'Nunito'}.pp-sniff.on{background:var(--violet);color:#fff}.pp-interest{margin-top:12px;border-radius:13px;background:#FAF7FF;border:1px solid #E7DCF7;padding:10px;display:flex;gap:10px;align-items:center;justify-content:space-between}.pp-interest p{font-size:11.5px;margin:3px 0;color:var(--dim)}.pp-interest small{font-size:9.5px;color:#9A86BA}.pp-interest-actions{display:flex;gap:5px}.pp-interest-actions button{border:1px solid #CDBCEC;background:#fff;color:var(--violet);border-radius:999px;padding:5px 8px;font:700 10px 'Nunito'}.pp-status{font-size:10px;text-transform:capitalize;font-weight:800;padding:5px 8px;border-radius:999px}.pp-status.accepted{background:#E7F2E8;color:var(--moss)}.pp-status.accepted::after{content:" 🐕"}.pp-status.declined{background:#F4E9E9;color:#8A4A4A}.pp-invite-types{margin-bottom:14px}.pp-chip.purple.on{background:var(--violet);border-color:var(--violet)}.pp-safety-note{background:#F3F0F8;border-radius:11px;padding:10px;font-size:11.5px;color:var(--dim);text-align:left}
 
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
       `}</style>
